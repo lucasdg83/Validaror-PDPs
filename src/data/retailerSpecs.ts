@@ -22,7 +22,7 @@ export const COUNTRIES: CountryInfo[] = [
     name: 'Chile',
     flag: '🇨🇱',
     description: 'Falabella, Ripley, Paris, Mercado Libre CL, Cruz Verde, Salcobrand, Preunic',
-    status: 'pending',
+    status: 'active',
     expectedRetailersCount: 7,
   },
   {
@@ -30,7 +30,7 @@ export const COUNTRIES: CountryInfo[] = [
     name: 'México',
     flag: '🇲🇽',
     description: 'Amazon MX, Mercado Libre MX, Liverpool, Palacio de Hierro, Farmacias del Ahorro, Sanborns',
-    status: 'pending',
+    status: 'active',
     expectedRetailersCount: 6,
   },
   {
@@ -38,7 +38,7 @@ export const COUNTRIES: CountryInfo[] = [
     name: 'CERAN (Centroamérica & Andina)',
     flag: '🌎',
     description: 'Colombia, Perú, Ecuador, Panamá, Costa Rica, Guatemala e-retailers',
-    status: 'pending',
+    status: 'active',
     expectedRetailersCount: 8,
   },
 ];

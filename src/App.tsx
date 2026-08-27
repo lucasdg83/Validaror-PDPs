@@ -122,14 +122,10 @@ export default function App() {
           /* Dashboard Home View */
           <div className="space-y-10">
             {/* Hero / Intro Section */}
-            <div className="text-center max-w-3xl mx-auto space-y-3">
+            <div className="text-center max-w-3xl mx-auto">
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-100 uppercase">
                 Validador de <span className="text-indigo-400 drop-shadow-[0_0_20px_rgba(129,140,248,0.35)]">PDPs</span>
               </h1>
-
-              <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                Inspecciona carpetas locales de campañas, audita resoluciones, ratios 1:1, DPI, pesos máximos, secuencias de imágenes y presencia de video por país.
-              </p>
             </div>
 
             {/* Dashboard Country Grid (5 Modules with Equal Visual Weight) */}
@@ -217,12 +213,8 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="h-12 border-t border-white/5 flex items-center justify-between px-6 sm:px-8 bg-black/40 text-[10px] text-slate-500 font-mono relative z-10 backdrop-blur-md">
+      <footer className="h-12 border-t border-white/5 flex items-center justify-center px-6 sm:px-8 bg-black/40 text-[10px] text-slate-500 font-mono relative z-10 backdrop-blur-md">
         <div>&copy; 2026 VALIDADOR DE PDPS • DIGITAL E-RETAIL SOLUTIONS</div>
-        <div className="flex items-center gap-4">
-          <span className="hidden sm:inline">MOTOR: <span className="text-emerald-400 font-semibold">HTML5 CANVAS CLIENT-SIDE</span></span>
-          <span>ESTADO: <span className="text-emerald-400 font-semibold">ONLINE</span></span>
-        </div>
       </footer>
 
       {/* Primary Report Modal (Text & Visual views) */}

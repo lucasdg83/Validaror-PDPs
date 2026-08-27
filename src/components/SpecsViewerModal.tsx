@@ -7,7 +7,6 @@ import {
   Scale,
   Edit2,
   Plus,
-  RotateCcw,
   Sparkles,
   Info,
 } from 'lucide-react';
@@ -16,7 +15,6 @@ import { COUNTRIES } from '../data/retailerSpecs';
 import {
   loadAllSpecs,
   saveAllSpecs,
-  resetSpecsToDefault,
   CountrySpecsStore,
 } from '../utils/specsStorage';
 import { EditRetailerModal } from './EditRetailerModal';
@@ -91,16 +89,6 @@ export const SpecsViewerModal: React.FC<SpecsViewerModalProps> = ({
     setTimeout(() => setSuccessNotice(null), 3000);
   };
 
-  const handleResetDefaults = () => {
-    if (confirm('¿Restablecer todas las especificaciones a los valores de fábrica?')) {
-      const defs = resetSpecsToDefault();
-      setSpecsStore(defs);
-      if (onSpecsUpdated) onSpecsUpdated();
-      setSuccessNotice('Specs restablecidas a valores oficiales.');
-      setTimeout(() => setSuccessNotice(null), 3000);
-    }
-  };
-
   const handleAddNewRetailer = () => {
     const newSpec: RetailerSpec = {
       id: `${selectedCountry.toLowerCase()}_retailer_${Date.now()}`,
@@ -146,15 +134,6 @@ export const SpecsViewerModal: React.FC<SpecsViewerModalProps> = ({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={handleResetDefaults}
-              title="Restablecer specs a fábrica"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Restablecer</span>
-            </button>
-
-            <button
               id="btn-close-specs-modal"
               onClick={onClose}
               className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-colors"
@@ -173,7 +152,7 @@ export const SpecsViewerModal: React.FC<SpecsViewerModalProps> = ({
         )}
 
         {/* Country Selector Tabs */}
-        <div className="flex items-center justify-between gap-2 px-6 py-3 bg-white/[0.01] border-b border-white/10 overflow-x-auto custom-scrollbar">
+        <div className="flex items-center justify-between gap-2 px-6 py-3 bg-white/[0.01] border-b border-white/10 overflow-x-auto no-scrollbar">
           <div className="flex items-center gap-2 min-w-max">
             {COUNTRIES.map((c) => {
               const count = (specsStore[c.code] || []).length;
@@ -191,7 +170,7 @@ export const SpecsViewerModal: React.FC<SpecsViewerModalProps> = ({
                   <span className="text-base">{c.flag}</span>
                   <span>{c.name}</span>
                   <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
                       isSelected ? 'bg-black/30 text-indigo-100' : 'bg-white/10 text-slate-400'
                     }`}
                   >
@@ -204,7 +183,7 @@ export const SpecsViewerModal: React.FC<SpecsViewerModalProps> = ({
 
           <button
             onClick={handleAddNewRetailer}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 transition-all flex-shrink-0"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 transition-all flex-shrink-0 active:scale-95"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>+ Agregar Retailer</span>
@@ -212,7 +191,7 @@ export const SpecsViewerModal: React.FC<SpecsViewerModalProps> = ({
         </div>
 
         {/* Spec List */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-black/30">
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar bg-black/30">
           {currentSpecs.length === 0 ? (
             <div className="text-center py-12 px-4 rounded-2xl bg-white/[0.02] border border-dashed border-white/10">
               <p className="text-sm text-slate-400 mb-3">
