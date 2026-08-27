@@ -1,4 +1,4 @@
-export type CountryCode = 'AR' | 'UY' | 'CL' | 'MX' | 'CERAN';
+export type CountryCode = 'AR' | 'UY' | 'CL' | 'MX' | 'CERAN' | 'ADAPTACIONES';
 
 export interface CountryInfo {
   code: CountryCode;
@@ -7,6 +7,7 @@ export interface CountryInfo {
   description: string;
   status: 'active' | 'pending';
   expectedRetailersCount: number;
+  isAdaptationModule?: boolean;
 }
 
 export interface RetailerSpec {
@@ -95,5 +96,62 @@ export interface AnalysisReport {
   totalRetailersValidated: number;
   totalConformFiles: number;
   totalInconsistentFiles: number;
+  rawTxtReport: string;
+}
+
+export interface AdaptationTask {
+  id: string;
+  type: 'resize' | 'translation' | 'element_removal' | 'general';
+  title: string;
+  description: string;
+  targetFileName?: string;
+  expectedDimensions?: string;
+  expectedRatio?: string;
+  originalText?: string;
+  expectedTranslation?: string;
+  elementToRemove?: string;
+}
+
+export interface AdaptationAmbiguityAlert {
+  id: string;
+  title: string;
+  pmNoteText: string;
+  reason: string;
+  suggestedClarification: string;
+  severity: 'high' | 'medium' | 'low';
+}
+
+export interface AdaptationItemResult {
+  fileName: string;
+  previewUrl?: string;
+  width?: number;
+  height?: number;
+  aspectRatio?: string;
+  status: 'OK' | 'ERROR' | 'AMBIGUOUS';
+  tasksEvaluated: {
+    taskType: 'resize' | 'translation' | 'element_removal' | 'general';
+    description: string;
+    passed: boolean;
+    details: string;
+  }[];
+  errors: string[];
+  warnings: string[];
+  notes: string[];
+}
+
+export interface AdaptationReport {
+  id: string;
+  briefFileName: string;
+  briefFileType: 'pdf' | 'pptx' | 'ppt';
+  folderName: string;
+  analyzedDate: string;
+  timestamp: number;
+  totalImagesAnalyzed: number;
+  totalTasksDetected: number;
+  conformImagesCount: number;
+  inconsistentImagesCount: number;
+  ambiguityAlerts: AdaptationAmbiguityAlert[];
+  items: AdaptationItemResult[];
+  extractedBriefSummary: string[];
   rawTxtReport: string;
 }

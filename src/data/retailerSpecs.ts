@@ -41,6 +41,15 @@ export const COUNTRIES: CountryInfo[] = [
     status: 'active',
     expectedRetailersCount: 8,
   },
+  {
+    code: 'ADAPTACIONES',
+    name: 'Adaptaciones',
+    flag: '🔄',
+    description: 'Resize & Ratios, Traducción de textos EN➔ES, Eliminación de elementos vía brief PPT / PDF',
+    status: 'active',
+    expectedRetailersCount: 0,
+    isAdaptationModule: true,
+  },
 ];
 
 export const ARGENTINA_SPECS: RetailerSpec[] = [

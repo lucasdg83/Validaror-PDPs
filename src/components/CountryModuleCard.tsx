@@ -16,6 +16,7 @@ export const CountryModuleCard: React.FC<CountryModuleCardProps> = ({
   isLoading,
 }) => {
   const isPending = country.status === 'pending';
+  const isAdaptation = country.code === 'ADAPTACIONES' || country.isAdaptationModule;
   const retailerNames = country.description.split(', ').map((s) => s.trim());
 
   return (
@@ -31,13 +32,18 @@ export const CountryModuleCard: React.FC<CountryModuleCardProps> = ({
           </div>
           <div>
             <h3 className="text-lg sm:text-xl font-bold text-slate-100 group-hover:text-indigo-300 transition-colors">
-              PDP {country.code}
+              {isAdaptation ? 'ADAPTACIONES' : `PDP ${country.code}`}
             </h3>
+            {isAdaptation && (
+              <span className="inline-block text-[10px] uppercase tracking-wider font-semibold text-indigo-400">
+                Brief PPT / PDF
+              </span>
+            )}
           </div>
         </div>
 
         <div className="flex items-center gap-1.5">
-          {onEditSpecs && (
+          {!isAdaptation && onEditSpecs && (
             <button
               type="button"
               title={`Configurar especificaciones técnicas de ${country.name}`}
@@ -54,13 +60,17 @@ export const CountryModuleCard: React.FC<CountryModuleCardProps> = ({
         </div>
       </div>
 
-      {/* Retailers preview tags */}
+      {/* Retailers / Tasks preview tags */}
       <div className="mb-5 flex-grow">
         <div className="flex flex-wrap gap-1.5">
           {retailerNames.slice(0, 5).map((ret, i) => (
             <span
               key={i}
-              className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-white/5 text-slate-300 border border-white/5"
+              className={`text-[11px] font-medium px-2 py-0.5 rounded-md border ${
+                isAdaptation
+                  ? 'bg-indigo-500/10 text-indigo-200 border-indigo-500/20'
+                  : 'bg-white/5 text-slate-300 border border-white/5'
+              }`}
             >
               {ret}
             </span>

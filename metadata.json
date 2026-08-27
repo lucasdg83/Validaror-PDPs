@@ -1,6 +1,6 @@
 {
-  "name": "Validador de PDPs",
-  "description": "Herramienta de auditoría y validación técnica de imágenes y contenido de Product Detail Pages (PDP) para e-retailers de Argentina, Uruguay, Chile, México y región CERAN.",
+  "name": "Validador de PDPs y Adaptaciones",
+  "description": "Herramienta de auditoría y validación técnica de Product Detail Pages (PDP) para Argentina, Uruguay, Chile, México, CERAN y módulo de validación de Adaptaciones con brief en PPT/PDF.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

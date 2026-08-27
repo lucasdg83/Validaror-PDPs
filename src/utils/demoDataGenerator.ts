@@ -293,6 +293,106 @@ export async function generateDemoFiles(country: CountryCode): Promise<File[]> {
 }
 
 /**
+ * Creates demo data for the ADAPTACIONES module:
+ * - A sample Brief document (mock PDF/PPT representation with handwritten PM notes)
+ * - Sample adapted image files with various sizes, ratios, translated texts, and retouched elements
+ */
+export async function generateAdaptationDemoData(): Promise<{
+  briefFile: File;
+  briefText: string;
+  imageFiles: File[];
+}> {
+  const briefText = `
+BRIEF DE ADAPTACIONES - CAMPAÑA REVITALIFT L'ORÉAL PARIS
+Notas del Project Manager (PM):
+
+1. PIEZA 01 (Hero Feed):
+   - Resize a 1080x1350px (Ratio 4:5).
+   - Traducir claim superior: "Pure Hyaluronic Acid Serum" -> "Sérum con Ácido Hialurónico Puro".
+   - Quitar el logo "US #1 Dermatologist Brand" de la esquina inferior.
+
+2. PIEZA 02 (Stories / Reels):
+   - Resize a 1080x1920px (Ratio 9:16 vertical).
+   - Traducir titular: "Visibly plumps skin in 1 hour" -> "Piel visiblemente más rellena en 1 hora".
+   - Mantener fondo claro y centrado.
+
+3. PIEZA 03 (E-Retailer Square):
+   - Medida: 1200x1200px (Ratio 1:1).
+   - Traducir "Dermatologist Tested" -> "Testeado Dermatológicamente".
+   - Eliminar el frasco secundario del fondo (dejar solo el producto individual).
+
+4. NOTA AMBIGUA DEL PM (Para verificación de alerta):
+   - "Adaptar la imagen de textura a la medida que el diseñador vea más conveniente para el banner web".
+`;
+
+  // Create mock PDF blob for the brief
+  const pdfBlob = new Blob([briefText], { type: 'application/pdf' });
+  const briefFile = new File([pdfBlob], 'Brief_Adaptaciones_Revitalift_PM_Notes.pdf', {
+    type: 'application/pdf',
+  });
+
+  const imageFiles: File[] = [];
+
+  // 1. Piece 1: 1080x1350px (Ratio 4:5)
+  const blob1 = await createSampleImageBlob(
+    1080,
+    1350,
+    'Sérum Ácido Hialurónico Puro\n1080x1350 (4:5) - Logo US removido',
+    '#ffffff'
+  );
+  const file1 = new File([blob1], 'Revitalift_Feed_4x5.jpg', { type: 'image/jpeg' });
+  Object.defineProperty(file1, 'webkitRelativePath', {
+    value: 'Adaptaciones/Revitalift_Feed_4x5.jpg',
+    writable: false,
+  });
+  imageFiles.push(file1);
+
+  // 2. Piece 2: 1080x1920px (Ratio 9:16)
+  const blob2 = await createSampleImageBlob(
+    1080,
+    1920,
+    'Piel visiblemente más rellena\n1080x1920 (9:16)',
+    '#f8fafc'
+  );
+  const file2 = new File([blob2], 'Revitalift_Story_9x16.jpg', { type: 'image/jpeg' });
+  Object.defineProperty(file2, 'webkitRelativePath', {
+    value: 'Adaptaciones/Revitalift_Story_9x16.jpg',
+    writable: false,
+  });
+  imageFiles.push(file2);
+
+  // 3. Piece 3: 1200x1200px (Ratio 1:1)
+  const blob3 = await createSampleImageBlob(
+    1200,
+    1200,
+    'Testeado Dermatológicamente\n1200x1200 (1:1) - Packshot único',
+    '#ffffff'
+  );
+  const file3 = new File([blob3], 'Revitalift_Square_1200x1200.jpg', { type: 'image/jpeg' });
+  Object.defineProperty(file3, 'webkitRelativePath', {
+    value: 'Adaptaciones/Revitalift_Square_1200x1200.jpg',
+    writable: false,
+  });
+  imageFiles.push(file3);
+
+  // 4. Piece 4: 800x600px (Textura)
+  const blob4 = await createSampleImageBlob(
+    800,
+    600,
+    'Textura Gel Hidratante\n800x600 (4:3)',
+    '#f1f5f9'
+  );
+  const file4 = new File([blob4], 'Revitalift_Textura_Banner.jpg', { type: 'image/jpeg' });
+  Object.defineProperty(file4, 'webkitRelativePath', {
+    value: 'Adaptaciones/Revitalift_Textura_Banner.jpg',
+    writable: false,
+  });
+  imageFiles.push(file4);
+
+  return { briefFile, briefText, imageFiles };
+}
+
+/**
  * Creates and downloads a sample .zip file of the campaign folder
  */
 export async function downloadDemoZip(country: CountryCode): Promise<void> {

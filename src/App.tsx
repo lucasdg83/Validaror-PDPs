@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { COUNTRIES } from './data/retailerSpecs';
-import { CountryInfo, AnalysisReport, CountryCode } from './types';
+import { CountryInfo, AnalysisReport, CountryCode, AdaptationReport } from './types';
 import { Header } from './components/Header';
 import { CountryModuleCard } from './components/CountryModuleCard';
 import { FolderDropZone } from './components/FolderDropZone';
+import { AdaptationsDropZone } from './components/AdaptationsDropZone';
 import { ReportModal } from './components/ReportModal';
+import { AdaptationReportModal } from './components/AdaptationReportModal';
 import { SpecsViewerModal } from './components/SpecsViewerModal';
 import { PendingCountryModal } from './components/PendingCountryModal';
 import { auditFilesForCountry } from './utils/folderScanner';
 import { generateDemoFiles } from './utils/demoDataGenerator';
+import { validateAdaptations, BriefFileHolder } from './utils/adaptationValidator';
 import { History } from 'lucide-react';
 
 const SESSION_HISTORY_STORAGE_KEY = 'pdp_session_reports_v1';
@@ -20,7 +23,9 @@ export default function App() {
   const [specsModalInitialCountry, setSpecsModalInitialCountry] = useState<CountryCode>('AR');
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState<{ current: number; total: number; currentFile: string } | undefined>(undefined);
+  const [adaptationProgress, setAdaptationProgress] = useState<{ current: number; total: number; message: string } | undefined>(undefined);
   const [currentReport, setCurrentReport] = useState<AnalysisReport | null>(null);
+  const [currentAdaptationReport, setCurrentAdaptationReport] = useState<AdaptationReport | null>(null);
   const [reportHistory, setReportHistory] = useState<AnalysisReport[]>(() => {
     try {
       const stored = sessionStorage.getItem(SESSION_HISTORY_STORAGE_KEY);
@@ -52,6 +57,7 @@ export default function App() {
   };
 
   const handleOpenEditSpecsForCountry = (country: CountryInfo) => {
+    if (country.code === 'ADAPTACIONES') return;
     setSpecsModalInitialCountry(country.code);
     setIsSpecsModalOpen(true);
   };
@@ -77,6 +83,27 @@ export default function App() {
     } finally {
       setIsProcessing(false);
       setProgress(undefined);
+    }
+  };
+
+  const handleValidateAdaptations = async (brief: BriefFileHolder, imageFiles: File[]) => {
+    setIsProcessing(true);
+    setAdaptationProgress({
+      current: 0,
+      total: imageFiles.length,
+      message: 'Iniciando validación de adaptaciones...',
+    });
+
+    try {
+      const report = await validateAdaptations(brief, imageFiles, (prog) => {
+        setAdaptationProgress(prog);
+      });
+      setCurrentAdaptationReport(report);
+    } catch (err) {
+      console.error('Error during adaptation validation:', err);
+    } finally {
+      setIsProcessing(false);
+      setAdaptationProgress(undefined);
     }
   };
 
@@ -112,7 +139,7 @@ export default function App() {
 
       {/* Top Navbar */}
       <Header onOpenSpecs={() => {
-        setSpecsModalInitialCountry(selectedCountry?.code || 'AR');
+        setSpecsModalInitialCountry(selectedCountry?.code === 'ADAPTACIONES' ? 'AR' : selectedCountry?.code || 'AR');
         setIsSpecsModalOpen(true);
       }} />
 
@@ -124,11 +151,11 @@ export default function App() {
             {/* Hero / Intro Section */}
             <div className="text-center max-w-3xl mx-auto">
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-100 uppercase">
-                Validador de <span className="text-indigo-400 drop-shadow-[0_0_20px_rgba(129,140,248,0.35)]">PDPs</span>
+                Validador de <span className="text-indigo-400 drop-shadow-[0_0_20px_rgba(129,140,248,0.35)]">PDPs y Adaptaciones</span>
               </h1>
             </div>
 
-            {/* Dashboard Country Grid (5 Modules with Equal Visual Weight) */}
+            {/* Dashboard Modules Grid (6 Modules) */}
             <div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {COUNTRIES.map((country) => (
@@ -199,6 +226,15 @@ export default function App() {
               </div>
             )}
           </div>
+        ) : selectedCountry.code === 'ADAPTACIONES' ? (
+          /* Active ADAPTACIONES Drop Zone View */
+          <AdaptationsDropZone
+            country={selectedCountry}
+            onValidate={handleValidateAdaptations}
+            onBack={() => setSelectedCountry(null)}
+            isProcessing={isProcessing}
+            progress={adaptationProgress}
+          />
         ) : (
           /* Active Country Drop Zone & Audit View */
           <FolderDropZone
@@ -214,13 +250,19 @@ export default function App() {
 
       {/* Footer */}
       <footer className="h-12 border-t border-white/5 flex items-center justify-center px-6 sm:px-8 bg-black/40 text-[10px] text-slate-500 font-mono relative z-10 backdrop-blur-md">
-        <div>&copy; 2026 VALIDADOR DE PDPS • DIGITAL E-RETAIL SOLUTIONS</div>
+        <div>&copy; 2026 VALIDADOR DE PDPS Y ADAPTACIONES • DIGITAL E-RETAIL SOLUTIONS</div>
       </footer>
 
       {/* Primary Report Modal (Text & Visual views) */}
       <ReportModal
         report={currentReport}
         onClose={() => setCurrentReport(null)}
+      />
+
+      {/* Adaptations Report Modal */}
+      <AdaptationReportModal
+        report={currentAdaptationReport}
+        onClose={() => setCurrentAdaptationReport(null)}
       />
 
       {/* Specs Reference & Editor Guide Modal */}
