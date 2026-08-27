@@ -81,7 +81,7 @@ export const CountryModuleCard: React.FC<CountryModuleCardProps> = ({
         className="w-full relative flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-xs tracking-wider uppercase transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/35 bg-indigo-500 hover:bg-indigo-600 text-white border border-indigo-400/30 active:scale-[0.98]"
       >
         <FolderSearch className="w-4 h-4 text-white" />
-        <span>Auditar Carpeta PDP {country.code}</span>
+        <span>Validar Carpeta</span>
         <ChevronRight className="w-4 h-4 opacity-70 group-hover:translate-x-1 transition-transform" />
       </button>
     </div>
