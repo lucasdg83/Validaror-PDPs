@@ -101,8 +101,31 @@ async function startServer() {
 
       // 3. Prompt instruction
       const promptText = `
-Eres un auditor experto de control de calidad para adaptaciones de diseño gráfico y e-commerce (PDPs y piezas de marketing).
-El usuario adjuntó un archivo de especificaciones (Brief en PDF, PPT, DOC o DOCX con notas agregadas por el Project Manager / PM) y una carpeta con ${files.length} imágenes adaptadas.
+Eres un auditor experto de control de calidad para adaptaciones de diseño gráfico y e-commerce (PDPs, Rich Media, A+ Content, ATF y BTF de L'Oréal, Maybelline, Garnier, etc.).
+El usuario adjuntó un archivo de especificaciones (Brief en PDF, PPT, DOC o DOCX con capturas, llamadas, flechas, cajas de texto y notas agregadas por el Project Manager / PM) y una carpeta con ${files.length} imágenes adaptadas.
+
+PATRONES Y FORMAS HABITUALES EN LAS QUE EL PM COMUNICA EN ESTOS DOCUMENTOS DE SPECS:
+1. **Llamadas Visuales / Cajas Rojas y Azules con Flechas**:
+   - El PM encierra textos en inglés (ej: "NEED A QUICK ROOT RETOUCH?", "3, 2, 1 ROOTS GONE!", "24HR WEAR", "RESISTANT") y saca una flecha con el texto traducido exacto o tono local (ej: "“Retocá tus raíces entre coloraciones”", "“3, 2, 1 Adios Raices”", "“Usá Magic Retouch”", "“De raíces”", "“Lo valemos”").
+   - El PM encierra elementos/packshots para solicitar reemplazo de empaque (ej: flecha a un pack apuntando "Pack 6U Argentina", "Pack Castaño Oscuro + 'Castaño Oscuro'").
+   - El PM marca con cruces amarillas o círculos elementos que deben ELIMINARSE o reemplazarse (ej: logos como "Logo Sin Amoniaco", tonos sobrantes, etc.).
+
+2. **Estructura de Bloques y Medidas (ATF, BTF, A+ Content, Packshots, Shadecards)**:
+   - Medidas explícitas por sección:
+     * PACKSHOTS + SWATCH / Shadecard: ej. "1600X1600, 1200X1200, 1000X1000 y 316x475".
+     * A+ CONTENT: ej. "1600X1600, 1200X1200, 1000X1000 y 316x475".
+     * BTF Mobile: ej. "MOBILE: 1000x768, MOBILE: 700x538, 1000x1000".
+     * BTF Desktop: ej. "DESKTOP: 1920x600".
+   - Instrucciones de replicación por tonos: ej. "Replicar para todos los tonos: WTP, WSH" o "Acá hay que incluir solo los siguientes 4 tonos: Smooth Espresso, Black Blur, Hazy Taupe, Mocha Contour".
+
+3. **Disclaimers Legales y Fuentes Obligatorias**:
+   - Notas al pie con flechas indicando agregar disclaimers:
+     ej. "Agregar disclaimer (en blanco con mayuscula): *Fuente: Euromonitor International Limited; Beauty & Personal Care edición 2026, ventas minoristas en valor, todos los canales minoristas, datos 2025. ** Estudio con consumidores 117 sujetos".
+   - Verificar si la pieza adaptada contiene el disclaimer solicitado con el formato indicado.
+
+4. **Claims Estadísticos y Claims de Modo de Uso / Claims de Beneficios**:
+   - Traducción de porcentajes (ej: "93% COINCIDEN EN QUE LAS PESTAÑAS SE VEN LEVANTADAS**", "91% COINCIDEN...").
+   - Steps / Pasos de uso (ej: "1. GIRÁ UNA SOLA VEZ - Para evitar que se rompa", "2. DELINEÁ - Con la punta precisa de 1.5mm", "3. ESCULPÍ", "4. DIFUMINÁ").
 
 METADATA DE LAS IMÁGENES CARGADAS EN LA CARPETA:
 ${JSON.stringify(files.map((f: any) => ({
@@ -116,20 +139,23 @@ ${JSON.stringify(files.map((f: any) => ({
 
 INSTRUCCIONES CLAVE DE VALIDACIÓN:
 1. ANÁLISIS DE CLARIDAD Y AMBIGÜEDAD DE LAS NOTAS DEL PM:
-   - Las aclaraciones en el documento (PDF, PPT, DOC, DOCX) pueden variar y ser textos o comentarios agregados por el PM.
-   - Si alguna indicación o nota no se entiende claramente, es ambigua, contradictoria, ilegible o le faltan datos críticos (ej: pide "adaptar a medida standard" sin decir cuál, o pide "quitar esto" sin señalar qué elemento, o pide "traducir" pero el texto en inglés no está especificado):
-     GENERA UNA ALERTA DE AMBIGÜEDAD (ambiguityAlerts) detallando la nota del PM, el motivo de la duda y qué se debería consultar o aclarar con el PM.
+   - Si alguna indicación o nota no se entiende claramente, es ambigua, contradictoria, ilegible o le faltan datos críticos (ej: no especifica el tono de un pack, la medida no coincide con el ratio, o la flecha apunta a un lugar confuso):
+     GENERA UNA ALERTA DE AMBIGÜEDAD (ambiguityAlerts) detallando la nota del PM, el motivo de la duda y la sugerencia de consulta con el PM.
 
-2. EVALUACIÓN DE LAS 3 TAREAS HABITUALES DE ADAPTACIÓN:
-   a) RESIZE / FORMATOS Y ASPECT RATIOS:
-      - Validar si las dimensiones (ancho x alto en px) y el aspect ratio (1:1, 4:5, 9:16, 16:9, etc.) coinciden con lo pedido en el documento para cada pieza.
-   b) TRADUCCIONES (Inglés a Español u otro idioma pedido):
-      - Verificar si los textos, claims, beneficios y titulares en inglés señalados en el brief fueron traducidos al español, o si persiste texto en inglés no traducido.
-   c) RETOQUE Y ELIMINACIÓN DE ELEMENTOS:
-      - Verificar si elementos solicitados para ser eliminados (logos, sellos dermatológicos, badges, packshots secundarios, claims legales) fueron removidos correctamente.
+2. EVALUACIÓN DE LAS TAREAS DE ADAPTACIÓN:
+   a) RESIZE / FORMATOS Y RATIOS:
+      - Validar si las dimensiones (ancho x alto en px) y el aspect ratio coinciden con las especificaciones del brief (Packshots, Shadecards, A+, BTF Mobile, BTF Desktop).
+   b) TRADUCCIONES Y CLAIMS (Claims, Pasos, Títulos):
+      - Verificar si los textos en inglés marcados con llamadas/flechas fueron traducidos fielmente al español según la nota del PM.
+   c) REEMPLAZO O RETOQUE DE PACKSHOTS Y TONOS:
+      - Verificar si se aplicaron los tonos correctos pedidos (ej: solo los 4 tonos indicados, cambio de tono a versión local).
+   d) AGREGADO DE DISCLAIMERS:
+      - Verificar si se incluyó el disclaimer legal obligatorio cuando el brief lo indica expresamente.
+   e) RETOQUE Y ELIMINACIÓN DE ELEMENTOS:
+      - Verificar si elementos tachados o marcados para quitar (logos de amoniaco, sellos, claims viejos) fueron removidos.
 
 3. EVALUACIÓN POR CADA ARCHIVO (items):
-   - Determinar si cada archivo está 'OK' (cumple todo), 'ERROR' (incumple medidas, traducciones o elementos pedidos), o 'AMBIGUOUS' (no se puede asegurar por notas confusas).
+   - Determinar si cada archivo está 'OK' (cumple todo lo requerido), 'ERROR' (incumple medidas, traducciones, tonos, disclaimer o elementos pedidos), o 'AMBIGUOUS' (no se puede asegurar por notas confusas).
    - Detallar lista de tareas evaluadas y errores/advertencias.
 
 Responde estrictamente en formato JSON según el esquema especificado.
