@@ -205,6 +205,88 @@ export async function generateDemoFiles(country: CountryCode): Promise<File[]> {
       files.push(file);
     }
     files.push(createMockVideoFile('mibelleza_reels.mp4', `${rootDir}/MiBelleza/mibelleza_reels.mp4`));
+  } else if (country === 'CL') {
+    // 1. Falabella (1500x1500px, 5 images + 1 ATF vertical video)
+    for (let i = 1; i <= 6; i++) {
+      const name = `falabella_0${i}.jpg`;
+      const relPath = `${rootDir}/Falabella/${name}`;
+      const blob = await createSampleImageBlob(1500, 1500, `Falabella 1500x1500 ${i}`, '#ffffff');
+      const file = new File([blob], name, { type: 'image/jpeg' });
+      Object.defineProperty(file, 'webkitRelativePath', { value: relPath, writable: false });
+      files.push(file);
+    }
+    files.push(createMockVideoFile('video_atf_falabella.mp4', `${rootDir}/Falabella/video_atf_falabella.mp4`));
+
+    // 2. Salcobrand (1050x1050px, 5 images)
+    for (let i = 1; i <= 5; i++) {
+      const name = `salcobrand_0${i}.jpg`;
+      const relPath = `${rootDir}/Salcobrand/${name}`;
+      const blob = await createSampleImageBlob(1050, 1050, `Salcobrand ${i}`, '#ffffff');
+      const file = new File([blob], name, { type: 'image/jpeg' });
+      Object.defineProperty(file, 'webkitRelativePath', { value: relPath, writable: false });
+      files.push(file);
+    }
+
+    // 3. Mercado Libre CL (1200x1200px, 6 images + 1 video)
+    for (let i = 1; i <= 6; i++) {
+      const name = `meli_cl_0${i}.jpg`;
+      const relPath = `${rootDir}/Mercado Libre/${name}`;
+      const blob = await createSampleImageBlob(1200, 1200, `MeLi CL ${i}`);
+      const file = new File([blob], name, { type: 'image/jpeg' });
+      Object.defineProperty(file, 'webkitRelativePath', { value: relPath, writable: false });
+      files.push(file);
+    }
+    files.push(createMockVideoFile('video_meli.mp4', `${rootDir}/Mercado Libre/video_meli.mp4`));
+
+    // 4. Ripley (1200x1200px, 5 images)
+    for (let i = 1; i <= 5; i++) {
+      const name = `ripley_0${i}.jpg`;
+      const relPath = `${rootDir}/Ripley/${name}`;
+      const blob = await createSampleImageBlob(1200, 1200, `Ripley ${i}`);
+      const file = new File([blob], name, { type: 'image/jpeg' });
+      Object.defineProperty(file, 'webkitRelativePath', { value: relPath, writable: false });
+      files.push(file);
+    }
+
+    // 5. Paris.cl (2331x3150px - Ratio 3:4, 5 images)
+    for (let i = 1; i <= 5; i++) {
+      const name = `paris_0${i}.jpg`;
+      const relPath = `${rootDir}/Paris/${name}`;
+      const blob = await createSampleImageBlob(2331, 3150, `Paris 3:4 ${i}`, '#ffffff');
+      const file = new File([blob], name, { type: 'image/jpeg' });
+      Object.defineProperty(file, 'webkitRelativePath', { value: relPath, writable: false });
+      files.push(file);
+    }
+
+    // 6. Farmacias Ahumada (1000x1000px, 5 images)
+    for (let i = 1; i <= 5; i++) {
+      const name = `ahumada_0${i}.jpg`;
+      const relPath = `${rootDir}/Farmacias Ahumada/${name}`;
+      const blob = await createSampleImageBlob(1000, 1000, `Ahumada ${i}`);
+      const file = new File([blob], name, { type: 'image/jpeg' });
+      Object.defineProperty(file, 'webkitRelativePath', { value: relPath, writable: false });
+      files.push(file);
+    }
+
+    // 7. Cruz Verde (1000x1000px, 5 images)
+    for (let i = 1; i <= 5; i++) {
+      const name = `cruz_verde_0${i}.jpg`;
+      const relPath = `${rootDir}/Farmacias Cruz Verde/${name}`;
+      const blob = await createSampleImageBlob(1000, 1000, `Cruz Verde ${i}`);
+      const file = new File([blob], name, { type: 'image/jpeg' });
+      Object.defineProperty(file, 'webkitRelativePath', { value: relPath, writable: false });
+      files.push(file);
+    }
+
+    // 8. DBS Beauty Store (1000x1000px, 4 images)
+    for (let i = 1; i <= 4; i++) {
+      const name = `dbs_0${i}.jpg`;
+      const relPath = `${rootDir}/DBS Beauty Store/${name}`;
+      const blob = await createSampleImageBlob(1000, 1000, `DBS Beauty ${i}`, '#ffffff');
+      const file = new File([blob], name, { type: 'image/jpeg' });
+      Object.defineProperty(file, 'webkitRelativePath', { value: relPath, writable: false });
+      files.push(file);
+    }
   }
 
   return files;

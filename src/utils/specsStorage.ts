@@ -1,7 +1,7 @@
 import { CountryCode, RetailerSpec } from '../types';
 import { ARGENTINA_SPECS, URUGUAY_SPECS, CHILE_SPECS_DEFAULT, MEXICO_SPECS_DEFAULT, CERAN_SPECS_DEFAULT } from '../data/retailerSpecs';
 
-const SPECS_STORAGE_KEY = 'pdp_custom_specs_v1';
+const SPECS_STORAGE_KEY = 'pdp_custom_specs_v2';
 
 export interface CountrySpecsStore {
   AR: RetailerSpec[];

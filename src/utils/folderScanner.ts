@@ -212,11 +212,19 @@ export async function auditFilesForCountry(
         fileItem.previewUrl = imgData.previewUrl;
 
         // Check Dimensions
-        const widthMatches = imgData.width === spec.width;
-        const heightMatches = imgData.height === spec.height;
-        if (!widthMatches || !heightMatches) {
-          allDimensionsMatch = false;
-          fileItem.errors.push(`Dimensiones incorrectas: ${imgData.width}x${imgData.height}px (Requerido: ${spec.width}x${spec.height}px)`);
+        let dimsValid = false;
+        if (spec.isMinimumResolution) {
+          dimsValid = (imgData.width || 0) >= spec.width && (imgData.height || 0) >= spec.height;
+          if (!dimsValid) {
+            allDimensionsMatch = false;
+            fileItem.errors.push(`Dimensiones por debajo del mínimo: ${imgData.width}x${imgData.height}px (Mínimo requerido: ${spec.width}x${spec.height}px)`);
+          }
+        } else {
+          dimsValid = imgData.width === spec.width && imgData.height === spec.height;
+          if (!dimsValid) {
+            allDimensionsMatch = false;
+            fileItem.errors.push(`Dimensiones incorrectas: ${imgData.width}x${imgData.height}px (Requerido: ${spec.width}x${spec.height}px)`);
+          }
         }
 
         // Check Aspect Ratio
@@ -321,15 +329,21 @@ export async function auditFilesForCountry(
     }
 
     // 3. Image count check
-    if (imageCount <= spec.maxImages) {
+    if (spec.minImages && imageCount < spec.minImages) {
       bulletItems.push({
-        type: 'OK',
-        message: `Cantidad de imágenes (${imageCount}/${spec.maxImages}).`,
+        type: 'ERROR',
+        message: `Cantidad de imágenes insuficiente (${imageCount} imgs encontradas, mínimo requerido: ${spec.minImages}).`,
       });
-    } else {
+    } else if (imageCount > spec.maxImages) {
       bulletItems.push({
         type: 'ERROR',
         message: `Se encontraron ${imageCount} imágenes (Máximo permitido: ${spec.maxImages}).`,
+      });
+    } else if (imageCount > 0) {
+      const minLabel = spec.minImages ? `Mín: ${spec.minImages} / ` : '';
+      bulletItems.push({
+        type: 'OK',
+        message: `Cantidad de imágenes (${imageCount} imgs - ${minLabel}Máx: ${spec.maxImages}).`,
       });
     }
 
@@ -383,6 +397,22 @@ export async function auditFilesForCountry(
       bulletItems.push({
         type: 'INFO',
         message: `Regla de secuencia: ${spec.sequenceRule}.`,
+      });
+    }
+
+    // 8b. LDB rule note
+    if (spec.ldbRule && imageFiles.length > 0) {
+      bulletItems.push({
+        type: 'INFO',
+        message: `Regla LDB: ${spec.ldbRule}.`,
+      });
+    }
+
+    // 8c. BTF spec note
+    if (spec.btfSpecs && imageFiles.length > 0) {
+      bulletItems.push({
+        type: 'INFO',
+        message: `${spec.btfSpecs}.`,
       });
     }
 

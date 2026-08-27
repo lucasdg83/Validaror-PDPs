@@ -17,13 +17,20 @@ export interface RetailerSpec {
   width: number;
   height: number;
   aspectRatio: string;
+  minImages?: number;
   maxImages: number;
+  isMinimumResolution?: boolean;
   allowedFormats: ('JPG' | 'JPEG' | 'PNG' | 'WEBP')[];
   maxFileSizeKB?: number;
   dpi?: number;
   requireVideo?: boolean;
+  allowsVideo?: boolean;
+  videoSpecs?: string;
   videoType?: 'any' | 'vertical_30s';
   mainWhiteBackground?: boolean;
+  btfAllowed?: boolean;
+  btfSpecs?: string;
+  ldbRule?: string;
   packshotCentering?: {
     minPackshotSize: number; // e.g. 750px
     fieldSize: number;       // e.g. 900px
