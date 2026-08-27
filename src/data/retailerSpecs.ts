@@ -35,7 +35,7 @@ export const COUNTRIES: CountryInfo[] = [
   },
   {
     code: 'CERAN',
-    name: 'CERAN (Centroamérica & Andina)',
+    name: 'CERAN',
     flag: '🌎',
     description: 'Colombia, Perú, Ecuador, Panamá, Costa Rica, Guatemala e-retailers',
     status: 'active',

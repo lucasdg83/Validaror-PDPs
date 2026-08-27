@@ -149,42 +149,32 @@ export const SpecsViewerModal: React.FC<SpecsViewerModalProps> = ({
         )}
 
         {/* Country Selector Tabs */}
-        <div className="flex items-center justify-between gap-2 px-6 py-3 bg-white/[0.01] border-b border-white/10 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-2 min-w-max">
-            {COUNTRIES.map((c) => {
-              const count = (specsStore[c.code] || []).length;
-              const isSelected = selectedCountry === c.code;
-              return (
-                <button
-                  key={c.code}
-                  onClick={() => setSelectedCountry(c.code)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-                    isSelected
-                      ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/25'
-                      : 'text-slate-400 hover:text-slate-200 bg-white/5 border border-white/10'
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 px-6 py-3 bg-white/[0.01] border-b border-white/10">
+          {COUNTRIES.map((c) => {
+            const count = (specsStore[c.code] || []).length;
+            const isSelected = selectedCountry === c.code;
+            return (
+              <button
+                key={c.code}
+                onClick={() => setSelectedCountry(c.code)}
+                className={`flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+                  isSelected
+                    ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/25'
+                    : 'text-slate-400 hover:text-slate-200 bg-white/5 border border-white/10'
+                }`}
+              >
+                <span className="text-base">{c.flag}</span>
+                <span>{c.name}</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+                    isSelected ? 'bg-black/30 text-indigo-100' : 'bg-white/10 text-slate-400'
                   }`}
                 >
-                  <span className="text-base">{c.flag}</span>
-                  <span>{c.name}</span>
-                  <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
-                      isSelected ? 'bg-black/30 text-indigo-100' : 'bg-white/10 text-slate-400'
-                    }`}
-                  >
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            onClick={handleAddNewRetailer}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 transition-all flex-shrink-0 active:scale-95"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>+ Agregar Retailer</span>
-          </button>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Spec List */}
