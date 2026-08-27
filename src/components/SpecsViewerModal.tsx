@@ -124,11 +124,8 @@ export const SpecsViewerModal: React.FC<SpecsViewerModalProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-100 uppercase tracking-tight">
-                Guía & Configuración de Specs PDP
+                Configuración de Specs
               </h2>
-              <p className="text-xs text-slate-400">
-                Consulta y edita las especificaciones técnicas por país y por e-retailer
-              </p>
             </div>
           </div>
 
@@ -214,19 +211,9 @@ export const SpecsViewerModal: React.FC<SpecsViewerModalProps> = ({
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-bold text-base text-slate-100">{spec.name}</h3>
-                    <span className="text-xs px-2 py-0.5 rounded bg-white/5 text-slate-400 border border-white/10 font-mono">
-                      Carpetas: {spec.aliases.slice(0, 3).join(', ')}
-                    </span>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 font-mono text-xs font-semibold">
-                      {spec.width}x{spec.height}px ({spec.aspectRatio})
-                    </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-slate-300 text-xs font-medium">
-                      Máx {spec.maxImages} imgs
-                    </span>
-
                     {/* Edit button */}
                     <button
                       onClick={() => {

@@ -17,7 +17,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSpecs }) => {
             title="Abrir Guía y Editor de Especificaciones Técnicas"
           >
             <BookOpen className="w-4 h-4 text-indigo-400" />
-            <span>Guía & Editor de Specs</span>
+            <span>Configuración de Specs</span>
           </button>
         </div>
       </div>
