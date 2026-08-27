@@ -142,7 +142,7 @@ export interface AdaptationItemResult {
 export interface AdaptationReport {
   id: string;
   briefFileName: string;
-  briefFileType: 'pdf' | 'pptx' | 'ppt';
+  briefFileType: 'pdf' | 'pptx' | 'ppt' | 'docx' | 'doc';
   folderName: string;
   analyzedDate: string;
   timestamp: number;

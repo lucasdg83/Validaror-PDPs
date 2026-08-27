@@ -42,7 +42,7 @@ async function startServer() {
       const { briefFile, files, rootFolderName } = req.body;
 
       if (!briefFile || !briefFile.base64Data) {
-        return res.status(400).json({ error: "Falta el archivo de brief/especificaciones (PPT o PDF)." });
+        return res.status(400).json({ error: "Falta el archivo de brief/especificaciones (PPT, PDF, DOC o DOCX)." });
       }
 
       if (!files || !Array.isArray(files) || files.length === 0) {
@@ -70,9 +70,15 @@ async function startServer() {
             data: briefFile.base64Data.replace(/^data:application\/pdf;base64,/, ""),
           },
         });
-      } else if (briefFile.text) {
+      }
+      
+      if (briefFile.text) {
         parts.push({
-          text: `CONTENIDO DEL BRIEF / NOTAS DEL PM:\n${briefFile.text}`,
+          text: `CONTENIDO DEL BRIEF / NOTAS DEL PM (Documento ${briefFile.name}):\n${briefFile.text}`,
+        });
+      } else if (briefFile.type !== "pdf" && !briefFile.name.toLowerCase().endsWith(".pdf")) {
+        parts.push({
+          text: `DOCUMENTO DE ESPECIFICACIONES / BRIEF: ${briefFile.name} (${briefFile.type?.toUpperCase()})`,
         });
       }
 
@@ -96,7 +102,7 @@ async function startServer() {
       // 3. Prompt instruction
       const promptText = `
 Eres un auditor experto de control de calidad para adaptaciones de diseño gráfico y e-commerce (PDPs y piezas de marketing).
-El usuario adjuntó un archivo de especificaciones (Brief en PDF o PPT con notas agregadas a mano por el Project Manager / PM) y una carpeta con ${files.length} imágenes adaptadas.
+El usuario adjuntó un archivo de especificaciones (Brief en PDF, PPT, DOC o DOCX con notas agregadas por el Project Manager / PM) y una carpeta con ${files.length} imágenes adaptadas.
 
 METADATA DE LAS IMÁGENES CARGADAS EN LA CARPETA:
 ${JSON.stringify(files.map((f: any) => ({
@@ -110,7 +116,7 @@ ${JSON.stringify(files.map((f: any) => ({
 
 INSTRUCCIONES CLAVE DE VALIDACIÓN:
 1. ANÁLISIS DE CLARIDAD Y AMBIGÜEDAD DE LAS NOTAS DEL PM:
-   - Las aclaraciones en el PDF/PPT pueden variar y ser textos agregados a mano por el PM.
+   - Las aclaraciones en el documento (PDF, PPT, DOC, DOCX) pueden variar y ser textos o comentarios agregados por el PM.
    - Si alguna indicación o nota no se entiende claramente, es ambigua, contradictoria, ilegible o le faltan datos críticos (ej: pide "adaptar a medida standard" sin decir cuál, o pide "quitar esto" sin señalar qué elemento, o pide "traducir" pero el texto en inglés no está especificado):
      GENERA UNA ALERTA DE AMBIGÜEDAD (ambiguityAlerts) detallando la nota del PM, el motivo de la duda y qué se debería consultar o aclarar con el PM.
 

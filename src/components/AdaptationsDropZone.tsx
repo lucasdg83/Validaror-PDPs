@@ -10,7 +10,7 @@ import {
   Image as ImageIcon,
   Trash2,
 } from 'lucide-react';
-import { BriefFileHolder } from '../utils/adaptationValidator';
+import { BriefFileHolder, extractDocText } from '../utils/adaptationValidator';
 
 interface AdaptationsDropZoneProps {
   country: CountryInfo;
@@ -36,20 +36,26 @@ export const AdaptationsDropZone: React.FC<AdaptationsDropZoneProps> = ({
   const briefInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle Brief File selection (PDF or PPTX / PPT)
-  const handleBriefFile = (file: File) => {
+  // Handle Brief File selection (PDF, PPTX, PPT, DOCX, DOC)
+  const handleBriefFile = async (file: File) => {
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
-    if (!['pdf', 'pptx', 'ppt'].includes(ext)) {
-      setValidationAlert('Formato no soportado para el brief. Por favor adjunte un archivo PDF, PPTX o PPT.');
+    if (!['pdf', 'pptx', 'ppt', 'docx', 'doc'].includes(ext)) {
+      setValidationAlert('Formato no soportado para el brief. Por favor adjunte un archivo PDF, PPTX, PPT, DOCX o DOC.');
       return;
     }
 
     setValidationAlert(null);
+    let extractedText = '';
+    if (ext === 'docx' || ext === 'doc') {
+      extractedText = await extractDocText(file);
+    }
+
     setBriefHolder({
       file,
       name: file.name,
-      type: ext === 'pdf' ? 'pdf' : ext === 'pptx' ? 'pptx' : 'ppt',
+      type: ext === 'pdf' ? 'pdf' : ext === 'pptx' ? 'pptx' : ext === 'ppt' ? 'ppt' : ext === 'docx' ? 'docx' : 'doc',
       sizeBytes: file.size,
+      extractedText: extractedText || undefined,
     });
   };
 
@@ -143,12 +149,12 @@ export const AdaptationsDropZone: React.FC<AdaptationsDropZoneProps> = ({
     const hasImages = imageFiles.length > 0;
 
     if (!hasBrief && !hasImages) {
-      setValidationAlert('⚠️ Debe adjuntar el archivo de especificaciones (PPT o PDF) y seleccionar la carpeta con imágenes antes de iniciar la validación.');
+      setValidationAlert('⚠️ Debe adjuntar el archivo de especificaciones (PPT, PDF, DOC o DOCX) y seleccionar la carpeta con imágenes antes de iniciar la validación.');
       return;
     }
 
     if (!hasBrief) {
-      setValidationAlert('⚠️ Falta adjuntar el archivo de especificaciones (PPT o PDF con las notas del PM) para poder iniciar la validación.');
+      setValidationAlert('⚠️ Falta adjuntar el archivo de especificaciones (PPT, PDF, DOC o DOCX con las notas del PM) para poder iniciar la validación.');
       return;
     }
 
@@ -205,7 +211,7 @@ export const AdaptationsDropZone: React.FC<AdaptationsDropZoneProps> = ({
 
       {/* Dual Upload Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Card 1: Brief Specs File (PPT / PDF) */}
+        {/* Card 1: Brief Specs File (PPT / PDF / DOC / DOCX) */}
         <div
           onDragOver={(e) => {
             e.preventDefault();
@@ -229,7 +235,7 @@ export const AdaptationsDropZone: React.FC<AdaptationsDropZoneProps> = ({
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wide">
-                    1. Archivo de Specs (PPT / PDF)
+                    1. Archivo de Specs (PPT / PDF / Word)
                   </h3>
                   <p className="text-[11px] text-slate-400">Brief con las notas del PM</p>
                 </div>
@@ -247,7 +253,13 @@ export const AdaptationsDropZone: React.FC<AdaptationsDropZoneProps> = ({
               <div className="p-4 rounded-xl bg-white/[0.04] border border-white/10 mb-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3 overflow-hidden">
-                    <span className="text-2xl">{briefHolder.type === 'pdf' ? '📄' : '📊'}</span>
+                    <span className="text-2xl">
+                      {briefHolder.type === 'pdf'
+                        ? '📄'
+                        : briefHolder.type === 'docx' || briefHolder.type === 'doc'
+                        ? '📝'
+                        : '📊'}
+                    </span>
                     <div className="truncate">
                       <p className="text-xs font-semibold text-slate-200 truncate">{briefHolder.name}</p>
                       <p className="text-[11px] text-slate-400 font-mono">
@@ -268,7 +280,7 @@ export const AdaptationsDropZone: React.FC<AdaptationsDropZoneProps> = ({
               <div className="text-center py-8 px-4 border-2 border-dashed border-white/10 rounded-xl mb-4 hover:border-indigo-500/40 transition-colors">
                 <FileText className="w-10 h-10 text-slate-500 mx-auto mb-2" />
                 <p className="text-xs font-semibold text-slate-200">
-                  Arrastra aquí el archivo PPT, PPTX o PDF
+                  Arrastra aquí el archivo PPT, PDF, DOC o DOCX
                 </p>
                 <p className="text-[11px] text-slate-500 mt-1">
                   Conteniendo las notas manuscritas o textos del PM
@@ -281,7 +293,7 @@ export const AdaptationsDropZone: React.FC<AdaptationsDropZoneProps> = ({
             <input
               ref={briefInputRef}
               type="file"
-              accept=".pdf,.pptx,.ppt,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint"
+              accept=".pdf,.pptx,.ppt,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-powerpoint,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               className="hidden"
               onChange={(e) => {
                 if (e.target.files && e.target.files.length > 0) {
@@ -295,7 +307,7 @@ export const AdaptationsDropZone: React.FC<AdaptationsDropZoneProps> = ({
               className="w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold uppercase tracking-wider text-slate-200 transition-colors flex items-center justify-center gap-2"
             >
               <FileText className="w-4 h-4 text-indigo-400" />
-              <span>{briefHolder ? 'Cambiar Archivo' : 'Seleccionar PPT / PDF'}</span>
+              <span>{briefHolder ? 'Cambiar Archivo' : 'Seleccionar Archivo (PPT / PDF / Word)'}</span>
             </button>
           </div>
         </div>

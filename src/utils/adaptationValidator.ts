@@ -4,14 +4,49 @@ import {
   AdaptationAmbiguityAlert,
 } from '../types';
 import { analyzeImageFile } from './imageAnalyzer';
+import mammoth from 'mammoth';
 
 export interface BriefFileHolder {
   file: File;
   name: string;
-  type: 'pdf' | 'pptx' | 'ppt';
+  type: 'pdf' | 'pptx' | 'ppt' | 'docx' | 'doc';
   sizeBytes: number;
   base64Data?: string;
   extractedText?: string;
+}
+
+// Extract plain text from DOCX / DOC files
+export async function extractDocText(file: File): Promise<string> {
+  const ext = file.name.split('.').pop()?.toLowerCase() || '';
+  if (ext === 'docx') {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      return result.value || '';
+    } catch (err) {
+      console.warn('Error extracting docx text with mammoth:', err);
+    }
+  }
+
+  // Fallback for .doc or if mammoth fails: extract readable text strings from ArrayBuffer
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let rawStr = '';
+    for (let i = 0; i < bytes.length; i++) {
+      const b = bytes[i];
+      if ((b >= 32 && b <= 126) || b === 10 || b === 13 || (b >= 192 && b <= 255)) {
+        rawStr += String.fromCharCode(b);
+      } else if (rawStr.length > 0 && rawStr[rawStr.length - 1] !== ' ') {
+        rawStr += ' ';
+      }
+    }
+    // Clean up excessive whitespace
+    return rawStr.replace(/\s+/g, ' ').trim();
+  } catch (err) {
+    console.warn('Error extracting fallback doc text:', err);
+    return '';
+  }
 }
 
 // Convert a file to Base64
