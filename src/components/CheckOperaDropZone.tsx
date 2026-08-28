@@ -11,6 +11,8 @@ import {
   FolderTree,
   AlertTriangle,
   FolderOpen,
+  Database,
+  Layers,
 } from 'lucide-react';
 import {
   scanAndAnalyzeOperaFolder,
@@ -153,15 +155,20 @@ export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
         </button>
 
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-xl shadow-inner">
-            🎭
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500/20 via-purple-500/10 to-indigo-500/20 border border-pink-500/30 flex items-center justify-center shadow-inner">
+            <Database className="w-5 h-5 text-pink-400 drop-shadow-[0_0_8px_rgba(244,114,182,0.4)]" />
           </div>
           <div>
-            <h2 className="text-lg sm:text-xl font-bold text-slate-100 uppercase tracking-wide">
-              Check Opera
-            </h2>
-            <p className="text-xs text-pink-300 font-medium">
-              Auditoría Inteligente de Duplicados en Repositorios & Subcarpetas
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-100 uppercase tracking-wide">
+                Check Opera
+              </h2>
+              <span className="px-2 py-0.5 rounded-full bg-pink-500/15 border border-pink-500/30 text-pink-300 text-[10px] font-mono font-bold tracking-wider uppercase">
+                DAM Repository
+              </span>
+            </div>
+            <p className="text-xs text-pink-300/80 font-medium">
+              Auditoría Inteligente de Duplicados en Repositorios & Subcarpetas de Opera DAM
             </p>
           </div>
         </div>

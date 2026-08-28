@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   Image as ImageIcon,
   FolderOpen,
+  Database,
 } from 'lucide-react';
 import { generateOperaPDFReport, downloadOperaTXT } from '../utils/operaChecker';
 
@@ -63,13 +64,13 @@ export const CheckOperaReportModal: React.FC<CheckOperaReportModalProps> = ({
         {/* Top Header Bar */}
         <div className="px-6 py-4 border-b border-white/10 flex flex-wrap items-center justify-between gap-3 bg-white/[0.02]">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-pink-500/10 border border-pink-500/20 text-pink-400">
-              <Sparkles className="w-5 h-5" />
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-pink-500/20 via-purple-500/10 to-indigo-500/20 border border-pink-500/30 text-pink-400">
+              <Database className="w-5 h-5 drop-shadow-[0_0_8px_rgba(244,114,182,0.4)]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-100 uppercase tracking-wide">
-                  Check Opera: Auditoría de Imágenes Duplicadas
+                  Check Opera: Auditoría de Imágenes Duplicadas (Opera DAM)
                 </h3>
                 <span className="text-[11px] font-semibold text-pink-300 font-mono px-2 py-0.5 rounded bg-pink-500/10 border border-pink-500/20">
                   {report.folderName}

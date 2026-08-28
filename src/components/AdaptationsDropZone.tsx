@@ -251,15 +251,20 @@ export const AdaptationsDropZone: React.FC<AdaptationsDropZoneProps> = ({
       <div className="p-6 sm:p-8 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-3xl shadow-inner">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-3xl shadow-inner">
               🔄
             </div>
             <div>
-              <h2 className="text-2xl font-black text-slate-100 uppercase tracking-tight">
-                Módulo de Adaptaciones
-              </h2>
+              <div className="flex items-center gap-2.5">
+                <h2 className="text-2xl font-black text-slate-100 uppercase tracking-tight">
+                  Módulo de Adaptaciones
+                </h2>
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-mono font-bold tracking-wider uppercase">
+                  En Refinamiento
+                </span>
+              </div>
               <p className="text-xs text-slate-400">
-                Auditoría contra Brief y Análisis de Requerimientos de PM
+                Auditoría contra Brief y Análisis de Requerimientos de PM (Herramientas 100% operativas)
               </p>
             </div>
           </div>

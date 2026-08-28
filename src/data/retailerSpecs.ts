@@ -42,6 +42,15 @@ export const COUNTRIES: CountryInfo[] = [
     expectedRetailersCount: 8,
   },
   {
+    code: 'CHECK_OPERA',
+    name: 'Check Opera',
+    flag: '🏛️',
+    description: 'Detección IA de imágenes duplicadas en Opera DAM (mismo contenido visual + idéntico tamaño/resolución)',
+    status: 'active',
+    expectedRetailersCount: 0,
+    isOperaModule: true,
+  },
+  {
     code: 'ADAPTACIONES',
     name: 'Adaptaciones',
     flag: '🔄',
@@ -49,15 +58,6 @@ export const COUNTRIES: CountryInfo[] = [
     status: 'active',
     expectedRetailersCount: 0,
     isAdaptationModule: true,
-  },
-  {
-    code: 'CHECK_OPERA',
-    name: 'Check Opera',
-    flag: '🎭',
-    description: 'Detección IA de imágenes duplicadas (mismo contenido visual + idéntico tamaño/resolución)',
-    status: 'active',
-    expectedRetailersCount: 0,
-    isOperaModule: true,
   },
 ];
 

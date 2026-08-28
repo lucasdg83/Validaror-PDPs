@@ -460,7 +460,7 @@ export function generateOperaTXTReport(report: OperaAnalysisReport): string {
   const lines: string[] = [];
 
   lines.push('======================================================================');
-  lines.push('🎭 CHECK OPERA - AUDITORÍA DE IMÁGENES DUPLICADAS (IA & EXACT SIZE)');
+  lines.push('🏛️ CHECK OPERA - AUDITORÍA DE IMÁGENES DUPLICADAS (OPERA DAM)');
   lines.push('======================================================================');
   lines.push(`Carpeta Auditada:               /${report.folderName}/`);
   lines.push(`Fecha de Análisis:              ${report.analyzedDate}`);
