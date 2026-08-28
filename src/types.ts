@@ -155,3 +155,45 @@ export interface AdaptationReport {
   extractedBriefSummary: string[];
   rawTxtReport: string;
 }
+
+export interface BriefResourceLink {
+  url: string;
+  title: string;
+  description?: string;
+  type?: 'dam' | 'zip' | 'key_visual' | 'general';
+}
+
+export interface BriefActionItem {
+  category: 'sizes_formats' | 'translations' | 'shades_skus' | 'background_composition' | 'removals' | 'disclaimers' | 'general';
+  categoryTitle: string;
+  icon?: string;
+  instructions: string[];
+}
+
+export interface BriefAmbiguity {
+  id: string;
+  title: string;
+  pmNoteText: string;
+  reason: string;
+  suggestedQuestionToPM: string;
+  severity: 'high' | 'medium' | 'low';
+}
+
+export interface BriefAnalysisResult {
+  id: string;
+  fileName: string;
+  fileType: 'pdf' | 'pptx' | 'ppt' | 'docx' | 'doc';
+  fileSizeBytes: number;
+  analyzedDate: string;
+  timestamp: number;
+  productOrBrand: string;
+  overview: string;
+  clarityScore: number; // 0-100
+  clarityStatus: 'clear' | 'needs_clarification' | 'ambiguous';
+  clarityReasoning: string;
+  links: BriefResourceLink[];
+  actionCategories: BriefActionItem[];
+  ambiguities: BriefAmbiguity[];
+  plainTextReport: string;
+}
+

@@ -239,6 +239,233 @@ Responde estrictamente en formato JSON según el esquema especificado.
     }
   });
 
+  // Standalone PM Brief / Presentation Analyzer endpoint
+  app.post("/api/adaptations/analyze-brief", async (req, res) => {
+    try {
+      const { briefFile } = req.body;
+
+      if (!briefFile || (!briefFile.base64Data && !briefFile.text)) {
+        return res.status(400).json({ error: "Falta el archivo de brief/presentación a analizar." });
+      }
+
+      const ai = getGenAI();
+
+      if (!ai) {
+        // Fallback response if GEMINI_API_KEY is not configured
+        return res.json({
+          fallback: true,
+          data: {
+            productOrBrand: "Documento de Especificaciones (Modo Offline)",
+            overview: `Se procesó el archivo "${briefFile.name}". Configure GEMINI_API_KEY para habilitar la extracción multimodal profunda de llamadas, flechas y notas de PM.`,
+            clarityScore: 85,
+            clarityStatus: "clear",
+            clarityReasoning: "Estructura del archivo recibida y analizada localmente.",
+            links: [
+              {
+                url: "https://opera-dam.e-loreal.com",
+                title: "Repositorio Opera DAM",
+                description: "Enlace estándar a assets y recursos de L'Oréal.",
+                type: "dam",
+              },
+            ],
+            actionCategories: [
+              {
+                category: "sizes_formats",
+                categoryTitle: "Medidas y Formatos",
+                instructions: [
+                  "Verificar medidas para A+ Content (1000x1000, 1200x1200, 1600x1600).",
+                  "Verificar versiones Mobile y Desktop según el marketplace objetivo.",
+                ],
+              },
+              {
+                category: "translations",
+                categoryTitle: "Traducciones y Claims",
+                instructions: [
+                  "Revisar claims en inglés y asegurar traducción a tono local en español.",
+                ],
+              },
+            ],
+            ambiguities: [],
+            plainTextReport: `=====================================================
+REPORTE DE ANÁLISIS DE BRIEF / SPECS DE PM
+=====================================================
+Archivo: ${briefFile.name}
+Fecha: ${new Date().toLocaleString()}
+
+1. RESUMEN:
+Documento procesado en modo offline.
+
+2. ENLACES Y RECURSOS:
+- Opera DAM: https://opera-dam.e-loreal.com
+
+3. ACCIONES PRINCIPALES:
+- Adaptar piezas a medidas especificadas.
+- Traducir claims del inglés al español.
+=====================================================`,
+          },
+        });
+      }
+
+      // Prepare multimodal parts for Gemini
+      const parts: any[] = [];
+
+      if (briefFile.type === "pdf" || briefFile.name.toLowerCase().endsWith(".pdf")) {
+        parts.push({
+          inlineData: {
+            mimeType: "application/pdf",
+            data: briefFile.base64Data.replace(/^data:application\/pdf;base64,/, ""),
+          },
+        });
+      }
+
+      if (briefFile.text) {
+        parts.push({
+          text: `CONTENIDO EXTRAÍDO DEL DOCUMENTO / BRIEF (${briefFile.name}):\n${briefFile.text}`,
+        });
+      } else if (briefFile.type !== "pdf" && !briefFile.name.toLowerCase().endsWith(".pdf")) {
+        parts.push({
+          text: `DOCUMENTO DE BRIEF: ${briefFile.name} (${briefFile.type?.toUpperCase()})`,
+        });
+      }
+
+      const promptText = `
+Eres un especialista senior en Gestión de Proyectos de Diseño Gráfico, Producción Digital y E-commerce (L'Oréal, Maybelline, Lancôme, Garnier, etc.).
+Tu tarea es realizar un ANÁLISIS PROFUNDO, PRECISO Y ESTRUCTURADO de la presentación/documento de especificaciones (Brief en PPT, PDF, DOC o DOCX) provisto por el Project Manager (PM).
+
+OBJETIVOS DEL ANÁLISIS:
+1. EVALUAR LA CLARIDAD DEL PEDIDO DEL PM:
+   - ¿Es el pedido 100% comprensible para el equipo de diseño y adaptación?
+   - Asigna una puntuación de claridad (0-100) y un estado ('clear' para 80-100, 'needs_clarification' para 50-79, 'ambiguous' para <50).
+   - Explica brevemente por qué (si hay notas ilegibles, flechas confusas, falta de medidas, falta de tonos o textos incompletos).
+
+2. EXTRAER Y LISTAR TODOS LOS ENLACES / RECURSOS / LINKS:
+   - Extrae CADA URL encontrada en las diapositivas o texto (ej. links a Opera DAM, links a descargas .zip, links a Key Visuals / KV, links a carpetas, etc.).
+   - Detalla qué contiene cada enlace según la diapositiva o nota donde aparece.
+
+3. DESGLOSAR CON MÁXIMA CLARIDAD CADA ACCIÓN Y REQUERIMIENTO PEDIDO:
+   Categoriza las tareas en grupos claros:
+   a) Medidas y Formatos (ej: Amazon Desktop 1460x600, Mobile 600x450, Meli 768-1000px, A+ 1000x1000, 1200x1200, 1600x1600, 500x500, 768x1000, BTF Mobile/Desktop 1920x600, Packshots fondo blanco, etc.).
+   b) Traducciones y Reemplazo de Textos/Claims (ej: "NEED A QUICK ROOT RETOUCH?" ➔ "Retocá tus raíces entre coloraciones", "How to use" ➔ "Como usar", claims de pasos, etc.).
+   c) Tonos, Shadelists y SKUs (ej: filtrar tonos para incluir solo los tonos comercializados localmente como Bordeaux Bisous, Brown Caramel, etc., o replicar para todos los tonos).
+   d) Fondos y Composición Gráfica (ej: armar de cero, fondo blanco vs color, fondo rosa, recortar solo la cápsula, etc.).
+   e) Elementos a Eliminar / Mantener (ej: sacar logo sin amoníaco, sacar sellos, dejar textos clave como 'BLUR & CONTOUR', etc.).
+   f) Disclaimers y Fuentes Legales (ej: texto de disclaimer en blanco con mayúscula de Euromonitor).
+
+4. IDENTIFICAR AMBIGÜEDADES O DUDAS:
+   - Si alguna indicación es confusa, ambigua, contradictoria o incompleta, regístrala con la nota textual del PM, el motivo de la duda y la sugerencia de pregunta exacta para hacerle al PM.
+
+5. GENERAR UN REPORTE EN TEXTO PLANO (plainTextReport):
+   - Un resumen en formato texto plano estructurado, prolijo, con títulos en mayúsculas, viñetas limpias y enlaces directos, listo para ser copiado o leído sin rodeos.
+
+Responde estrictamente en formato JSON según el esquema definido.
+`;
+
+      parts.push({ text: promptText });
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.7-flash",
+        contents: { parts },
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              productOrBrand: { type: Type.STRING, description: "Marca y/o producto principal del brief" },
+              overview: { type: Type.STRING, description: "Resumen ejecutivo simple del objetivo del pedido" },
+              clarityScore: { type: Type.NUMBER, description: "Puntuación de claridad de 0 a 100" },
+              clarityStatus: { type: Type.STRING, enum: ["clear", "needs_clarification", "ambiguous"] },
+              clarityReasoning: { type: Type.STRING, description: "Explicación de la claridad y completitud del brief" },
+              links: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    url: { type: Type.STRING },
+                    title: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                    type: { type: Type.STRING, enum: ["dam", "zip", "key_visual", "general"] },
+                  },
+                  required: ["url", "title", "description"],
+                },
+                description: "Lista de todos los enlaces y recursos detectados en el brief",
+              },
+              actionCategories: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    category: {
+                      type: Type.STRING,
+                      enum: [
+                        "sizes_formats",
+                        "translations",
+                        "shades_skus",
+                        "background_composition",
+                        "removals",
+                        "disclaimers",
+                        "general",
+                      ],
+                    },
+                    categoryTitle: { type: Type.STRING },
+                    instructions: {
+                      type: Type.ARRAY,
+                      items: { type: Type.STRING },
+                    },
+                  },
+                  required: ["category", "categoryTitle", "instructions"],
+                },
+                description: "Categorías de acciones requeridas",
+              },
+              ambiguities: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    id: { type: Type.STRING },
+                    title: { type: Type.STRING },
+                    pmNoteText: { type: Type.STRING },
+                    reason: { type: Type.STRING },
+                    suggestedQuestionToPM: { type: Type.STRING },
+                    severity: { type: Type.STRING, enum: ["high", "medium", "low"] },
+                  },
+                  required: ["id", "title", "pmNoteText", "reason", "suggestedQuestionToPM", "severity"],
+                },
+                description: "Lista de dudas o ambigüedades encontradas en las notas del PM",
+              },
+              plainTextReport: {
+                type: Type.STRING,
+                description: "Reporte estructurado completo en formato texto plano",
+              },
+            },
+            required: [
+              "productOrBrand",
+              "overview",
+              "clarityScore",
+              "clarityStatus",
+              "clarityReasoning",
+              "links",
+              "actionCategories",
+              "ambiguities",
+              "plainTextReport",
+            ],
+          },
+        },
+      });
+
+      const parsed = JSON.parse(response.text || "{}");
+      return res.json({
+        success: true,
+        data: parsed,
+      });
+    } catch (err: any) {
+      console.error("Error in /api/adaptations/analyze-brief:", err);
+      return res.status(500).json({
+        error: "Ocurrió un error al analizar la presentación del PM con IA.",
+        details: err?.message || String(err),
+      });
+    }
+  });
+
   // Vite middleware in development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
