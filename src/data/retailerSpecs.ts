@@ -45,7 +45,7 @@ export const COUNTRIES: CountryInfo[] = [
     code: 'CHECK_OPERA',
     name: 'Check Opera',
     flag: '🏛️',
-    description: 'Detección IA de imágenes duplicadas en Opera DAM (mismo contenido visual + idéntico tamaño/resolución)',
+    description: 'Detección IA de imágenes duplicadas en carpetas locales para la subida de Opera',
     status: 'active',
     expectedRetailersCount: 0,
     isOperaModule: true,

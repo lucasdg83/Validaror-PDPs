@@ -1,6 +1,6 @@
 {
-  "name": "Validador de PDPs y Adaptaciones",
-  "description": "Herramienta de auditoría y validación técnica de Product Detail Pages (PDP), módulo de Adaptaciones con lector de briefs de PM, y Check Opera para detección inteligente de imágenes duplicadas por contenido y tamaño exacto.",
+  "name": "Design Hub",
+  "description": "Herramienta de verificación de specs para PDPs (ATF y BTF), detección de imágenes duplicadas para subida de Opera y control de adaptaciones.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -9,6 +9,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSpecs }) => {
   return (
     <header className="w-full border-b border-white/10 bg-black/40 backdrop-blur-xl sticky top-0 z-30 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-end">
+        {/* Right Actions */}
         <div className="flex items-center gap-3">
           <button
             id="btn-open-specs-guide"

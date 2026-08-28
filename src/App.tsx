@@ -150,10 +150,16 @@ export default function App() {
           /* Dashboard Home View */
           <div className="space-y-10">
             {/* Hero / Intro Section */}
-            <div className="text-center max-w-3xl mx-auto">
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-100 uppercase">
-                Validador de <span className="text-indigo-400 drop-shadow-[0_0_20px_rgba(129,140,248,0.35)]">PDPs y Adaptaciones</span>
+            <div className="text-center max-w-3xl mx-auto space-y-4">
+              {/* Main Typography Lockup */}
+              <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-slate-100 uppercase">
+                DESIGN <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-indigo-200 to-pink-300 drop-shadow-[0_0_25px_rgba(129,140,248,0.25)]">HUB</span>
               </h1>
+
+              {/* Minimal Editorial Subtitle */}
+              <p className="text-xs sm:text-sm text-slate-400 max-w-xl mx-auto font-medium leading-relaxed">
+                Herramienta de verificación de specs para PDPs (ATF y BTF), detección de imágenes duplicadas para subida de Opera y control de adaptaciones.
+              </p>
             </div>
 
             {/* Dashboard Modules Grid (6 Modules) */}

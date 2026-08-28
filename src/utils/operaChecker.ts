@@ -744,7 +744,7 @@ export function generateOperaPDFReport(report: OperaAnalysisReport) {
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(148, 163, 184);
-    doc.text(`Validador de PDPs • Módulo Check Opera  |  Página ${i} de ${pageCount}`, 14, 288);
+    doc.text(`VML Design Hub • L'Oréal (Opera DAM)  |  Página ${i} de ${pageCount}`, 14, 288);
   }
 
   doc.save(`Check_Opera_${report.folderName.replace(/\s+/g, '_')}_Reporte.pdf`);
