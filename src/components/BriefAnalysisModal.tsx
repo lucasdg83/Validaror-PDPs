@@ -14,6 +14,11 @@ import {
   FileCode,
   Eye,
   Link as LinkIcon,
+  LayoutGrid,
+  Maximize2,
+  Palette,
+  ShieldCheck,
+  HelpCircle,
 } from 'lucide-react';
 import { generateBriefAnalysisPDF, downloadBriefAnalysisTXT } from '../utils/briefAnalyzer';
 
@@ -26,7 +31,7 @@ export const BriefAnalysisModal: React.FC<BriefAnalysisModalProps> = ({
   result,
   onClose,
 }) => {
-  const [activeTab, setActiveTab] = useState<'visual' | 'text'>('visual');
+  const [activeTab, setActiveTab] = useState<'visual' | 'slides' | 'formats' | 'text'>('visual');
   const [copiedText, setCopiedText] = useState(false);
   const [copiedLinkIndex, setCopiedLinkIndex] = useState<number | null>(null);
 
@@ -55,11 +60,16 @@ export const BriefAnalysisModal: React.FC<BriefAnalysisModalProps> = ({
   const isClear = result.clarityStatus === 'clear';
   const isNeedsClarification = result.clarityStatus === 'needs_clarification';
 
+  const hasSlides = result.slideBySlideBreakdown && result.slideBySlideBreakdown.length > 0;
+  const hasFormats = result.requiredFormatsByChannel && result.requiredFormatsByChannel.length > 0;
+  const hasShades = result.shadesAndSkusList && result.shadesAndSkusList.length > 0;
+  const hasDisclaimers = result.legalDisclaimers && result.legalDisclaimers.length > 0;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-[#0f172a] border border-white/10 rounded-2xl w-full max-w-6xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Top Header Bar */}
-        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
+        <div className="px-6 py-4 border-b border-white/10 flex flex-wrap items-center justify-between gap-3 bg-white/[0.02]">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
               <Sparkles className="w-5 h-5" />
@@ -67,14 +77,14 @@ export const BriefAnalysisModal: React.FC<BriefAnalysisModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-100 uppercase tracking-wide">
-                  Análisis de Brief / Pedido del PM
+                  Análisis Exhaustivo del Brief / Pedido del PM
                 </h3>
                 <span className="text-[11px] font-semibold text-slate-400 font-mono px-2 py-0.5 rounded bg-white/5 border border-white/10">
                   {result.fileName}
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                {result.productOrBrand} • {result.analyzedDate}
+                {result.productOrBrand} • {result.totalSlidesOrSections || 1} Slides/Páginas • {result.analyzedDate}
               </p>
             </div>
           </div>
@@ -91,8 +101,34 @@ export const BriefAnalysisModal: React.FC<BriefAnalysisModalProps> = ({
                 }`}
               >
                 <Eye className="w-3.5 h-3.5" />
-                <span>Visual</span>
+                <span>Resumen General</span>
               </button>
+              {hasSlides && (
+                <button
+                  onClick={() => setActiveTab('slides')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors ${
+                    activeTab === 'slides'
+                      ? 'bg-indigo-500 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span>Por Slide ({result.slideBySlideBreakdown?.length})</span>
+                </button>
+              )}
+              {hasFormats && (
+                <button
+                  onClick={() => setActiveTab('formats')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors ${
+                    activeTab === 'formats'
+                      ? 'bg-indigo-500 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  <span>Formatos & Canales</span>
+                </button>
+              )}
               <button
                 onClick={() => setActiveTab('text')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors ${
@@ -117,7 +153,7 @@ export const BriefAnalysisModal: React.FC<BriefAnalysisModalProps> = ({
 
         {/* Modal Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin">
-          {activeTab === 'visual' ? (
+          {activeTab === 'visual' && (
             <>
               {/* Clarity & Overview Hero Card */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -184,10 +220,10 @@ export const BriefAnalysisModal: React.FC<BriefAnalysisModalProps> = ({
                   </div>
                   <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-slate-400">
                     <span>
-                      Producto: <strong className="text-slate-200">{result.productOrBrand}</strong>
+                      Producto / Campaña: <strong className="text-slate-200">{result.productOrBrand}</strong>
                     </span>
                     <span>
-                      {(result.fileSizeBytes / 1024).toFixed(0)} KB • {result.fileType.toUpperCase()}
+                      {result.totalSlidesOrSections || 1} diapositivas analizadas • {(result.fileSizeBytes / 1024).toFixed(0)} KB ({result.fileType.toUpperCase()})
                     </span>
                   </div>
                 </div>
@@ -200,11 +236,11 @@ export const BriefAnalysisModal: React.FC<BriefAnalysisModalProps> = ({
                     <div className="flex items-center gap-2 text-sky-400">
                       <LinkIcon className="w-4 h-4" />
                       <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                        Enlaces y Recursos Detectados ({result.links.length})
+                        Enlaces y Repositorios Extraídos ({result.links.length})
                       </h4>
                     </div>
                     <span className="text-[11px] text-slate-400">
-                      DAM Opera / Links de descarga / Key Visuals
+                      Opera DAM / Drive / Archivos ZIP / Key Visuals
                     </span>
                   </div>
 
@@ -275,7 +311,7 @@ export const BriefAnalysisModal: React.FC<BriefAnalysisModalProps> = ({
                   <div className="flex items-center gap-2 text-indigo-400">
                     <Layers className="w-4 h-4" />
                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                      Desglose de Acciones y Requerimientos ({result.actionCategories.length} categorías)
+                      Desglose de Acciones por Categoría ({result.actionCategories.length})
                     </h4>
                   </div>
 
@@ -312,11 +348,71 @@ export const BriefAnalysisModal: React.FC<BriefAnalysisModalProps> = ({
                 </div>
               )}
 
+              {/* Shades and SKUs List */}
+              {hasShades && (
+                <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-3">
+                  <div className="flex items-center gap-2 text-pink-400">
+                    <Palette className="w-4 h-4" />
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                      Tonos, Shadelists y SKUs Detectados ({result.shadesAndSkusList?.length})
+                    </h4>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {result.shadesAndSkusList?.map((shade, idx) => (
+                      <div
+                        key={idx}
+                        className="p-3 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="text-xs font-bold text-slate-200">{shade.name}</div>
+                          {shade.sku && <div className="text-[10px] font-mono text-slate-400">SKU: {shade.sku}</div>}
+                          {shade.details && <div className="text-[10px] text-slate-400">{shade.details}</div>}
+                        </div>
+                        <span
+                          className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded font-bold ${
+                            shade.action === 'remove'
+                              ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                              : shade.action === 'keep'
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                              : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                          }`}
+                        >
+                          {shade.action}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Legal Disclaimers */}
+              {hasDisclaimers && (
+                <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-400">
+                    <ShieldCheck className="w-4 h-4" />
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                      Disclaimers Legales y Fuentes Obligatorias ({result.legalDisclaimers?.length})
+                    </h4>
+                  </div>
+                  <div className="space-y-2">
+                    {result.legalDisclaimers?.map((disc, idx) => (
+                      <div key={idx} className="p-3.5 rounded-xl bg-white/[0.03] border border-white/5 space-y-1">
+                        <p className="text-xs text-slate-300 font-mono">"{disc.text}"</p>
+                        <div className="flex items-center gap-3 text-[11px] text-slate-400">
+                          {disc.stylingRequirement && <span>Regla: {disc.stylingRequirement}</span>}
+                          {disc.appliesTo && <span>Aplica a: {disc.appliesTo}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Ambiguities / Doubts to ask PM */}
               {result.ambiguities && result.ambiguities.length > 0 && (
                 <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-3">
                   <div className="flex items-center gap-2 text-amber-300">
-                    <AlertTriangle className="w-4 h-4" />
+                    <HelpCircle className="w-4 h-4" />
                     <h4 className="text-xs font-bold uppercase tracking-wider">
                       Dudas y Ambigüedades a Consultar al PM ({result.ambiguities.length})
                     </h4>
@@ -351,7 +447,133 @@ export const BriefAnalysisModal: React.FC<BriefAnalysisModalProps> = ({
                 </div>
               )}
             </>
-          ) : (
+          )}
+
+          {activeTab === 'slides' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-bold text-slate-200 uppercase tracking-wide flex items-center gap-2">
+                  <LayoutGrid className="w-4 h-4 text-indigo-400" />
+                  Desglose Diapositiva por Diapositiva ({result.slideBySlideBreakdown?.length} Slides)
+                </h4>
+                <span className="text-xs text-slate-400">
+                  Lectura directa de textos, llamadas de PM y maquetas de referencia
+                </span>
+              </div>
+
+              <div className="space-y-4">
+                {result.slideBySlideBreakdown?.map((slide, idx) => (
+                  <div
+                    key={idx}
+                    className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3"
+                  >
+                    <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                      <div className="flex items-center gap-2.5">
+                        <span className="px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-mono font-bold">
+                          Slide {slide.slideNumber}
+                        </span>
+                        <h5 className="text-sm font-bold text-slate-100">{slide.sectionTitle}</h5>
+                      </div>
+                      {slide.targetDimensions && slide.targetDimensions.length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          {slide.targetDimensions.map((dim, dIdx) => (
+                            <span
+                              key={dIdx}
+                              className="text-[11px] font-mono px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-300"
+                            >
+                              {dim}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Requested tasks */}
+                    {slide.requestedChanges && slide.requestedChanges.length > 0 && (
+                      <div className="space-y-1.5">
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                          Acciones y Cambios Requeridos:
+                        </div>
+                        <ul className="space-y-1">
+                          {slide.requestedChanges.map((change, cIdx) => (
+                            <li key={cIdx} className="text-xs text-slate-200 flex items-start gap-2">
+                              <span className="text-indigo-400 font-bold mt-0.5">•</span>
+                              <span className="flex-1">{change}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Original vs Translated Texts */}
+                    {(slide.originalText || slide.translatedText) && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                        {slide.originalText && (
+                          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-1">
+                            <div className="text-[10px] uppercase font-bold text-slate-400">
+                              Texto Original (Inglés / Mock):
+                            </div>
+                            <p className="text-xs text-slate-300 font-mono">"{slide.originalText}"</p>
+                          </div>
+                        )}
+                        {slide.translatedText && (
+                          <div className="p-3 rounded-xl bg-indigo-500/[0.05] border border-indigo-500/20 space-y-1">
+                            <div className="text-[10px] uppercase font-bold text-indigo-300">
+                              Adaptación al Español / Local:
+                            </div>
+                            <p className="text-xs text-slate-100 font-mono">"{slide.translatedText}"</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Notes */}
+                    {slide.notes && (
+                      <div className="text-xs text-slate-400 bg-white/[0.02] p-2.5 rounded-xl border border-white/5">
+                        <strong className="text-slate-300">Notas adicionales:</strong> {slide.notes}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'formats' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-bold text-slate-200 uppercase tracking-wide flex items-center gap-2">
+                  <Maximize2 className="w-4 h-4 text-emerald-400" />
+                  Matriz de Formatos y Medidas Requeridas por Canal ({result.requiredFormatsByChannel?.length})
+                </h4>
+                <span className="text-xs text-slate-400">
+                  Resoluciones estándar para Amazon, Mercado Libre, Falabella y A+ Content
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {result.requiredFormatsByChannel?.map((fmt, idx) => (
+                  <div
+                    key={idx}
+                    className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2 hover:bg-white/[0.05] transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-100">{fmt.channelOrSection}</span>
+                      {fmt.aspectRatio && (
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                          {fmt.aspectRatio}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-lg font-black font-mono text-emerald-400">{fmt.dimensions}</div>
+                    {fmt.details && <p className="text-xs text-slate-400 leading-relaxed">{fmt.details}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'text' && (
             /* Plain Text View */
             <div className="space-y-3">
               <div className="flex items-center justify-between">

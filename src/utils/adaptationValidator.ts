@@ -5,6 +5,7 @@ import {
 } from '../types';
 import { analyzeImageFile } from './imageAnalyzer';
 import mammoth from 'mammoth';
+import JSZip from 'jszip';
 
 export interface BriefFileHolder {
   file: File;
@@ -13,6 +14,105 @@ export interface BriefFileHolder {
   sizeBytes: number;
   base64Data?: string;
   extractedText?: string;
+}
+
+// Extract plain text and slides from PPTX / PPT files
+export async function extractPptxText(file: File): Promise<string> {
+  const ext = file.name.split('.').pop()?.toLowerCase() || '';
+  if (ext === 'pptx') {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const zip = await JSZip.loadAsync(arrayBuffer);
+      const slideFiles: { name: string; num: number }[] = [];
+
+      zip.forEach((relativePath) => {
+        const match = relativePath.match(/^ppt\/slides\/slide(\d+)\.xml$/i);
+        if (match) {
+          slideFiles.push({ name: relativePath, num: parseInt(match[1], 10) });
+        }
+      });
+
+      slideFiles.sort((a, b) => a.num - b.num);
+      const extractedSections: string[] = [];
+
+      for (const slide of slideFiles) {
+        const xmlContent = await zip.file(slide.name)?.async('string');
+        if (!xmlContent) continue;
+
+        // Extract text runs inside <a:t> tags
+        const textMatches = Array.from(xmlContent.matchAll(/<a:t[^>]*>(.*?)<\/a:t>/gi)).map((m) => m[1]);
+        const slideText = textMatches
+          .map((t) =>
+            t
+              .replace(/&amp;/g, '&')
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&quot;/g, '"')
+              .replace(/&apos;/g, "'")
+          )
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        // Extract hyperlinks from relationships
+        const relsPath = `ppt/slides/_rels/slide${slide.num}.xml.rels`;
+        const relsContent = await zip.file(relsPath)?.async('string');
+        const links: string[] = [];
+        if (relsContent) {
+          const linkMatches = Array.from(relsContent.matchAll(/Target="([^"]+)"/gi)).map((m) => m[1]);
+          for (const l of linkMatches) {
+            if (l.startsWith('http://') || l.startsWith('https://')) {
+              links.push(l);
+            }
+          }
+        }
+
+        // Check speaker / PM notes for this slide
+        const notesPath = `ppt/notesSlides/notesSlide${slide.num}.xml`;
+        const notesContent = await zip.file(notesPath)?.async('string');
+        let notesText = '';
+        if (notesContent) {
+          const noteMatches = Array.from(notesContent.matchAll(/<a:t[^>]*>(.*?)<\/a:t>/gi)).map((m) => m[1]);
+          notesText = noteMatches.join(' ').replace(/\s+/g, ' ').trim();
+        }
+
+        let sectionStr = `[DIAPOSITIVA ${slide.num}]\n`;
+        if (slideText) sectionStr += `Contenido de texto: ${slideText}\n`;
+        if (notesText) sectionStr += `Notas del PM / Orador: ${notesText}\n`;
+        if (links.length > 0) sectionStr += `Enlaces detectados: ${links.join(', ')}\n`;
+
+        extractedSections.push(sectionStr);
+      }
+
+      if (extractedSections.length > 0) {
+        return (
+          `TOTAL DIAPOSITIVAS: ${extractedSections.length}\n\n` +
+          extractedSections.join('\n----------------------------------------\n\n')
+        );
+      }
+    } catch (err) {
+      console.warn('Error extracting pptx content with JSZip:', err);
+    }
+  }
+
+  // Fallback for .ppt or corrupted pptx: extract UTF-8 strings and URLs
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let rawStr = '';
+    for (let i = 0; i < bytes.length; i++) {
+      const b = bytes[i];
+      if ((b >= 32 && b <= 126) || b === 10 || b === 13 || (b >= 192 && b <= 255)) {
+        rawStr += String.fromCharCode(b);
+      } else if (rawStr.length > 0 && rawStr[rawStr.length - 1] !== ' ') {
+        rawStr += ' ';
+      }
+    }
+    return rawStr.replace(/\s+/g, ' ').trim();
+  } catch (err) {
+    console.warn('Error extracting fallback ppt text:', err);
+    return '';
+  }
 }
 
 // Extract plain text from DOCX / DOC files

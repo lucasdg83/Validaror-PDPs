@@ -179,6 +179,38 @@ export interface BriefAmbiguity {
   severity: 'high' | 'medium' | 'low';
 }
 
+export interface BriefSlideDetail {
+  slideNumber: number | string;
+  sectionTitle: string;
+  requestedChanges: string[];
+  originalText?: string;
+  translatedText?: string;
+  targetDimensions?: string[];
+  links?: string[];
+  notes?: string;
+}
+
+export interface BriefShadeItem {
+  name: string;
+  sku?: string;
+  ean?: string;
+  action: 'keep' | 'remove' | 'add' | 'replicate' | 'info';
+  details?: string;
+}
+
+export interface BriefFormatRequirement {
+  channelOrSection: string;
+  dimensions: string;
+  aspectRatio?: string;
+  details?: string;
+}
+
+export interface BriefLegalDisclaimer {
+  text: string;
+  stylingRequirement?: string;
+  appliesTo?: string;
+}
+
 export interface BriefAnalysisResult {
   id: string;
   fileName: string;
@@ -188,11 +220,16 @@ export interface BriefAnalysisResult {
   timestamp: number;
   productOrBrand: string;
   overview: string;
+  totalSlidesOrSections?: number;
   clarityScore: number; // 0-100
   clarityStatus: 'clear' | 'needs_clarification' | 'ambiguous';
   clarityReasoning: string;
   links: BriefResourceLink[];
   actionCategories: BriefActionItem[];
+  slideBySlideBreakdown?: BriefSlideDetail[];
+  shadesAndSkusList?: BriefShadeItem[];
+  requiredFormatsByChannel?: BriefFormatRequirement[];
+  legalDisclaimers?: BriefLegalDisclaimer[];
   ambiguities: BriefAmbiguity[];
   plainTextReport: string;
 }

@@ -257,6 +257,7 @@ Responde estrictamente en formato JSON según el esquema especificado.
           data: {
             productOrBrand: "Documento de Especificaciones (Modo Offline)",
             overview: `Se procesó el archivo "${briefFile.name}". Configure GEMINI_API_KEY para habilitar la extracción multimodal profunda de llamadas, flechas y notas de PM.`,
+            totalSlidesOrSections: 1,
             clarityScore: 85,
             clarityStatus: "clear",
             clarityReasoning: "Estructura del archivo recibida y analizada localmente.",
@@ -285,6 +286,22 @@ Responde estrictamente en formato JSON según el esquema especificado.
                 ],
               },
             ],
+            slideBySlideBreakdown: [
+              {
+                slideNumber: 1,
+                sectionTitle: "Especificaciones Generales",
+                requestedChanges: ["Adaptar copies y formatos según lineamientos de marca."],
+                targetDimensions: ["1000x1000 px", "1200x1200 px"],
+              },
+            ],
+            requiredFormatsByChannel: [
+              {
+                channelOrSection: "Amazon / Mercado Libre",
+                dimensions: "1000x1000 px / 1200x1200 px",
+                aspectRatio: "1:1",
+                details: "Fondo blanco / transparente según especificación",
+              },
+            ],
             ambiguities: [],
             plainTextReport: `=====================================================
 REPORTE DE ANÁLISIS DE BRIEF / SPECS DE PM
@@ -309,18 +326,21 @@ Documento procesado en modo offline.
       // Prepare multimodal parts for Gemini
       const parts: any[] = [];
 
-      if (briefFile.type === "pdf" || briefFile.name.toLowerCase().endsWith(".pdf")) {
+      if (briefFile.base64Data && (briefFile.type === "pdf" || briefFile.name.toLowerCase().endsWith(".pdf"))) {
+        const rawB64 = briefFile.base64Data.includes(",")
+          ? briefFile.base64Data.split(",")[1]
+          : briefFile.base64Data;
         parts.push({
           inlineData: {
             mimeType: "application/pdf",
-            data: briefFile.base64Data.replace(/^data:application\/pdf;base64,/, ""),
+            data: rawB64,
           },
         });
       }
 
       if (briefFile.text) {
         parts.push({
-          text: `CONTENIDO EXTRAÍDO DEL DOCUMENTO / BRIEF (${briefFile.name}):\n${briefFile.text}`,
+          text: `CONTENIDO EXTRAÍDO DEL DOCUMENTO / PRESENTACIÓN (${briefFile.name}):\n\n${briefFile.text}`,
         });
       } else if (briefFile.type !== "pdf" && !briefFile.name.toLowerCase().endsWith(".pdf")) {
         parts.push({
@@ -329,35 +349,48 @@ Documento procesado en modo offline.
       }
 
       const promptText = `
-Eres un especialista senior en Gestión de Proyectos de Diseño Gráfico, Producción Digital y E-commerce (L'Oréal, Maybelline, Lancôme, Garnier, etc.).
-Tu tarea es realizar un ANÁLISIS PROFUNDO, PRECISO Y ESTRUCTURADO de la presentación/documento de especificaciones (Brief en PPT, PDF, DOC o DOCX) provisto por el Project Manager (PM).
+Eres un especialista senior en Gestión de Proyectos de Diseño Gráfico, Producción Digital y E-commerce (L'Oréal, Maybelline, Lancôme, Garnier, La Roche-Posay, etc.).
+Tu tarea es realizar un ANÁLISIS EXHAUSTIVO, MINUCIOSO, PRECISO Y ESTRUCTURADO de la presentación/documento de especificaciones (Brief en PPTX, PPT, PDF, DOC o DOCX) provisto por el Project Manager (PM).
 
-OBJETIVOS DEL ANÁLISIS:
+OBJETIVOS DEL ANÁLISIS DETALLADO:
+
 1. EVALUAR LA CLARIDAD DEL PEDIDO DEL PM:
-   - ¿Es el pedido 100% comprensible para el equipo de diseño y adaptación?
-   - Asigna una puntuación de claridad (0-100) y un estado ('clear' para 80-100, 'needs_clarification' para 50-79, 'ambiguous' para <50).
-   - Explica brevemente por qué (si hay notas ilegibles, flechas confusas, falta de medidas, falta de tonos o textos incompletos).
+   - Evalúa si el pedido es 100% claro e implementable sin dudas para los diseñadores y adaptadores.
+   - Asigna una puntuación de claridad (0 a 100) y clasifica ('clear' para 80-100, 'needs_clarification' para 50-79, 'ambiguous' para <50).
+   - Explica el diagnóstico: ¿Faltan medidas? ¿Hay textos en otros idiomas sin traducción explícita? ¿Hay flechas o llamadas manuscritas confusas?
 
-2. EXTRAER Y LISTAR TODOS LOS ENLACES / RECURSOS / LINKS:
-   - Extrae CADA URL encontrada en las diapositivas o texto (ej. links a Opera DAM, links a descargas .zip, links a Key Visuals / KV, links a carpetas, etc.).
-   - Detalla qué contiene cada enlace según la diapositiva o nota donde aparece.
+2. DESGLOSE DIAPOSITIVA POR DIAPOSITIVA (O SECCIÓN POR SECCIÓN):
+   - Analiza CADA diapositiva, slide o página detectada en el documento.
+   - Para cada slide, extrae:
+     * slideNumber: número de diapositiva o identificador.
+     * sectionTitle: título o temática del slide (ej: "Slide 1: Packshot Principal", "Slide 2: Beneficios / Claims", "Slide 3: Shadelist & Swatches", "Slide 4: BTF Mobile & Desktop").
+     * requestedChanges: lista minuciosa de cambios pedidos por el PM (ej: "Reemplazar claim en inglés por 'Retocá tus raíces en 3 segundos'", "Recortar imagen de modelo", "Añadir logo de marca", "Eliminar sello de amoníaco").
+     * originalText: texto original detectado en la maqueta o referencia.
+     * translatedText: texto sugerido o solicitado en español con tono local.
+     * targetDimensions: medidas solicitadas en ese slide (ej: ["1460x600 px", "600x450 px", "1000x1000 px"]).
+     * links: URLs o enlaces mencionados en ese slide.
+     * notes: comentarios o notas específicas del PM para ese slide.
 
-3. DESGLOSAR CON MÁXIMA CLARIDAD CADA ACCIÓN Y REQUERIMIENTO PEDIDO:
-   Categoriza las tareas en grupos claros:
-   a) Medidas y Formatos (ej: Amazon Desktop 1460x600, Mobile 600x450, Meli 768-1000px, A+ 1000x1000, 1200x1200, 1600x1600, 500x500, 768x1000, BTF Mobile/Desktop 1920x600, Packshots fondo blanco, etc.).
-   b) Traducciones y Reemplazo de Textos/Claims (ej: "NEED A QUICK ROOT RETOUCH?" ➔ "Retocá tus raíces entre coloraciones", "How to use" ➔ "Como usar", claims de pasos, etc.).
-   c) Tonos, Shadelists y SKUs (ej: filtrar tonos para incluir solo los tonos comercializados localmente como Bordeaux Bisous, Brown Caramel, etc., o replicar para todos los tonos).
-   d) Fondos y Composición Gráfica (ej: armar de cero, fondo blanco vs color, fondo rosa, recortar solo la cápsula, etc.).
-   e) Elementos a Eliminar / Mantener (ej: sacar logo sin amoníaco, sacar sellos, dejar textos clave como 'BLUR & CONTOUR', etc.).
-   f) Disclaimers y Fuentes Legales (ej: texto de disclaimer en blanco con mayúscula de Euromonitor).
+3. EXTRACCIÓN TOTAL DE ENLACES Y RECURSOS:
+   - Extrae CADA URL detectada (Opera DAM, carpetas Google Drive/SharePoint, links a archivos ZIP, Key Visuals, guidelines, etc.).
+   - Clasifica su tipo: 'dam' | 'zip' | 'key_visual' | 'general' y explica qué recurso aloja.
 
-4. IDENTIFICAR AMBIGÜEDADES O DUDAS:
-   - Si alguna indicación es confusa, ambigua, contradictoria o incompleta, regístrala con la nota textual del PM, el motivo de la duda y la sugerencia de pregunta exacta para hacerle al PM.
+4. MATRIZ DE FORMATOS Y MEDIDAS REQUERIDAS POR CANAL:
+   - Lista todas las resoluciones solicitadas (ej. Amazon Desktop: 1460x600, Amazon Mobile: 600x450, Mercado Libre: 1200x1200 / 1000x1000, A+ Content: 1600x1600 / 500x500, Falabella: 1000x1000, BTF: 1920x600 / 700x538).
 
-5. GENERAR UN REPORTE EN TEXTO PLANO (plainTextReport):
-   - Un resumen en formato texto plano estructurado, prolijo, con títulos en mayúsculas, viñetas limpias y enlaces directos, listo para ser copiado o leído sin rodeos.
+5. SHADES, SKUS Y VARIANTES:
+   - Si el brief menciona tonos, colores, números de SKU o EANs, extrae cada uno y la acción correspondiente ('keep' = mantener, 'remove' = eliminar del arte, 'add' = agregar, 'replicate' = generar adaptación individual).
 
-Responde estrictamente en formato JSON según el esquema definido.
+6. DISCLAIMERS Y LEGALES:
+   - Extrae todos los textos legales obligatorios (fuente Euromonitor, asteriscos de pruebas instrumentales, letra chica).
+
+7. IDENTIFICACIÓN DE AMBIGÜEDADES O DUDAS PARA EL PM:
+   - Para cada punto dudoso, registra la nota textual del PM, la razón de la ambigüedad y redacta la pregunta exacta que el diseñador debe enviarle al PM para destrabar el trabajo.
+
+8. REPORTE EN TEXTO PLANO PROLIJO:
+   - Genera un reporte exhaustivo en texto plano con títulos claros, separadores de sección y bullets para copiar directamente a Teams/Slack/Email.
+
+Responde estrictamente en formato JSON válido según el schema.
 `;
 
       parts.push({ text: promptText });
@@ -371,10 +404,11 @@ Responde estrictamente en formato JSON según el esquema definido.
             type: Type.OBJECT,
             properties: {
               productOrBrand: { type: Type.STRING, description: "Marca y/o producto principal del brief" },
-              overview: { type: Type.STRING, description: "Resumen ejecutivo simple del objetivo del pedido" },
+              overview: { type: Type.STRING, description: "Resumen ejecutivo del objetivo del pedido" },
+              totalSlidesOrSections: { type: Type.INTEGER, description: "Total de diapositivas o secciones encontradas" },
               clarityScore: { type: Type.NUMBER, description: "Puntuación de claridad de 0 a 100" },
               clarityStatus: { type: Type.STRING, enum: ["clear", "needs_clarification", "ambiguous"] },
-              clarityReasoning: { type: Type.STRING, description: "Explicación de la claridad y completitud del brief" },
+              clarityReasoning: { type: Type.STRING, description: "Diagnóstico detallado sobre la claridad del documento" },
               links: {
                 type: Type.ARRAY,
                 items: {
@@ -387,7 +421,78 @@ Responde estrictamente en formato JSON según el esquema definido.
                   },
                   required: ["url", "title", "description"],
                 },
-                description: "Lista de todos los enlaces y recursos detectados en el brief",
+                description: "Lista de enlaces y repositorios detectados",
+              },
+              slideBySlideBreakdown: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    slideNumber: { type: Type.STRING, description: "Número de slide o página" },
+                    sectionTitle: { type: Type.STRING, description: "Título o descripción del slide" },
+                    requestedChanges: {
+                      type: Type.ARRAY,
+                      items: { type: Type.STRING },
+                      description: "Lista de cambios específicos pedidos en este slide",
+                    },
+                    originalText: { type: Type.STRING, description: "Texto original en inglés o referencia" },
+                    translatedText: { type: Type.STRING, description: "Texto traducido o adaptado solicitado" },
+                    targetDimensions: {
+                      type: Type.ARRAY,
+                      items: { type: Type.STRING },
+                      description: "Medidas requeridas para este slide",
+                    },
+                    links: {
+                      type: Type.ARRAY,
+                      items: { type: Type.STRING },
+                      description: "Enlaces presentes en este slide",
+                    },
+                    notes: { type: Type.STRING, description: "Notas del PM u observaciones" },
+                  },
+                  required: ["slideNumber", "sectionTitle", "requestedChanges"],
+                },
+                description: "Desglose exhaustivo slide por slide del brief",
+              },
+              requiredFormatsByChannel: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    channelOrSection: { type: Type.STRING, description: "Nombre del canal o sección (Amazon, Meli, A+, etc.)" },
+                    dimensions: { type: Type.STRING, description: "Dimensiones en píxeles (ej: 1460x600 px)" },
+                    aspectRatio: { type: Type.STRING, description: "Relación de aspecto (1:1, 16:9, etc.)" },
+                    details: { type: Type.STRING, description: "Detalles adicionales de peso, formato o fondo" },
+                  },
+                  required: ["channelOrSection", "dimensions"],
+                },
+                description: "Matriz de formatos requeridos por canal",
+              },
+              shadesAndSkusList: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    name: { type: Type.STRING, description: "Nombre del tono o producto" },
+                    sku: { type: Type.STRING, description: "Código SKU o EAN si existe" },
+                    action: { type: Type.STRING, enum: ["keep", "remove", "add", "replicate", "info"] },
+                    details: { type: Type.STRING, description: "Indicación del PM sobre este tono" },
+                  },
+                  required: ["name", "action"],
+                },
+                description: "Lista de tonos, SKUs y variantes",
+              },
+              legalDisclaimers: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    text: { type: Type.STRING, description: "Texto del disclaimer" },
+                    stylingRequirement: { type: Type.STRING, description: "Requerimiento de fuente, color o posición" },
+                    appliesTo: { type: Type.STRING, description: "A qué piezas o slides aplica" },
+                  },
+                  required: ["text"],
+                },
+                description: "Disclaimers legales y fuentes obligatorias",
               },
               actionCategories: {
                 type: Type.ARRAY,
@@ -444,6 +549,7 @@ Responde estrictamente en formato JSON según el esquema definido.
               "clarityStatus",
               "clarityReasoning",
               "links",
+              "slideBySlideBreakdown",
               "actionCategories",
               "ambiguities",
               "plainTextReport",
