@@ -277,11 +277,11 @@ export async function scanAndAnalyzeOperaFolder(
     console.warn('Backend AI check skipped, fallback to client perceptual matcher:', backendErr);
   }
 
-  // 2. Client-side Perceptual Matcher (Used if AI returned empty or as robust fallback)
-  const finalDuplicateGroups: OperaDuplicateGroup[] = [];
+  // 2. Process duplicate groups and ensure strict 1-to-1 file assignment (no ID reused across groups)
+  const rawGroups: OperaDuplicateGroup[] = [];
 
   if (usedBackendAI && aiDuplicateGroups.length > 0) {
-    finalDuplicateGroups.push(...aiDuplicateGroups);
+    rawGroups.push(...aiDuplicateGroups);
   } else {
     // Cluster identical dimension groups using perceptual dHash + size comparison
     Object.entries(dimensionGroups).forEach(([dim, groupList]) => {
@@ -311,9 +311,7 @@ export async function scanAndAnalyzeOperaFolder(
         }
 
         if (cluster.length >= 2) {
-          const totalBytes = cluster.reduce((acc, c) => acc + c.sizeBytes, 0);
-          const wastedBytes = totalBytes - cluster[0].sizeBytes;
-          finalDuplicateGroups.push({
+          rawGroups.push({
             groupId: `dup-${dim}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
             dimensionsStr: dim,
             width: base.width,
@@ -322,7 +320,7 @@ export async function scanAndAnalyzeOperaFolder(
             visualSummary: `Asset con contenido visual idéntico (${cluster[0].name.replace(/\.[^/.]+$/, '')})`,
             files: cluster,
             totalDuplicateCopies: cluster.length - 1,
-            wastedBytes,
+            wastedBytes: 0,
             confidence: 98,
             aiExplanation: `Las ${cluster.length} imágenes comparten exactamente la misma resolución (${dim} px) y el mismo contenido visual verificado.`,
           });
@@ -331,18 +329,29 @@ export async function scanAndAnalyzeOperaFolder(
     });
   }
 
-  // 3. Map duplicated file IDs & Identify Redundant Folders (100% duplicate content)
+  // Ensure mutually exclusive grouping: each image file belongs to at most one duplicate group
+  const assignedImageIds = new Set<string>();
+  const finalDuplicateGroups: OperaDuplicateGroup[] = [];
   const duplicatedFileIdMap = new Map<string, OperaDuplicateGroup>();
-  let totalWastedBytes = 0;
 
-  finalDuplicateGroups.forEach((g) => {
-    totalWastedBytes += g.wastedBytes;
-    g.files.forEach((f) => {
-      duplicatedFileIdMap.set(f.id, g);
-    });
-  });
+  for (const g of rawGroups) {
+    const unassignedFiles = g.files.filter((f) => !assignedImageIds.has(f.id));
+    if (unassignedFiles.length >= 2) {
+      unassignedFiles.forEach((f) => {
+        assignedImageIds.add(f.id);
+      });
+      const validGroup: OperaDuplicateGroup = {
+        ...g,
+        files: unassignedFiles,
+        totalDuplicateCopies: unassignedFiles.length - 1,
+        wastedBytes: 0,
+      };
+      finalDuplicateGroups.push(validGroup);
+      unassignedFiles.forEach((f) => duplicatedFileIdMap.set(f.id, validGroup));
+    }
+  }
 
-  // Group all images by their specific folder path
+  // 3. Identify Redundant Folders (100% duplicate content) with full subfolder path
   const folderToImagesMap: Record<string, OperaImageFile[]> = {};
   parsedImages.forEach((img) => {
     const folderKey = img.subfolderPath;
@@ -361,32 +370,30 @@ export async function scanAndAnalyzeOperaFolder(
     if (folderImages.length === 0) return;
 
     let redundantCount = 0;
-    let folderWastedBytes = 0;
 
     folderImages.forEach((img) => {
       const dupGroup = duplicatedFileIdMap.get(img.id);
       if (dupGroup) {
-        // Check if there is another copy of this image outside of this subfolder
+        // Check if there is another copy of this image outside of this subfolder or sibling
         const hasExternalCopy = dupGroup.files.some((other) => other.id !== img.id && other.subfolderPath !== subPath);
         const hasSiblingCopy = dupGroup.files.some((other) => other.id !== img.id);
 
         if (hasExternalCopy || hasSiblingCopy) {
           redundantCount++;
-          folderWastedBytes += img.sizeBytes;
         }
       }
     });
 
     // If 100% of the images in this folder are duplicate copies of images found elsewhere:
     if (redundantCount === folderImages.length && redundantCount > 0) {
-      const folderDisplayName = subPath.includes('/') ? subPath.split('/').pop()! : subPath;
+      const fullSubfolderDisplay = subPath === '(Raíz)' ? `/${rootFolderName}/` : `/${subPath}/`;
       entirelyDuplicatedFolders.push({
         folderPath: subPath,
-        folderDisplayName,
+        folderDisplayName: fullSubfolderDisplay,
         totalImages: folderImages.length,
-        wastedBytes: folderWastedBytes,
-        recommendation: `Se debe eliminar la carpeta "${folderDisplayName}" completa`,
-        explanation: `El 100% de las imágenes (${folderImages.length} archivos) contenidas en esta carpeta son copias idénticas de archivos ya existentes en otras ubicaciones. Eliminar la carpeta completa liberará ${(folderWastedBytes / 1024).toFixed(0)} KB sin perder ningún asset único.`,
+        wastedBytes: 0,
+        recommendation: `Se debe eliminar la carpeta "${fullSubfolderDisplay}" completa`,
+        explanation: `El 100% de las imágenes (${folderImages.length} archivos) contenidas en "${fullSubfolderDisplay}" son copias idénticas de archivos ya existentes en otras ubicaciones del proyecto. Eliminar esta carpeta completa no causará pérdida de ningún asset único.`,
         files: folderImages,
       });
     }
@@ -394,25 +401,28 @@ export async function scanAndAnalyzeOperaFolder(
 
   // 4. Construct Unique Images catalog (assets with no duplicates + 1 primary copy of each duplicate group)
   const uniqueImages: OperaImageFile[] = [];
-  const handledPrimaryIds = new Set<string>();
 
-  // Add primary copy from each duplicate group
+  // Add 1 primary copy from each duplicate group
   finalDuplicateGroups.forEach((g) => {
     if (g.files.length > 0) {
       uniqueImages.push(g.files[0]);
-      g.files.forEach((f) => handledPrimaryIds.add(f.id));
     }
   });
 
-  // Add all images that are not part of any duplicate group
+  // Add all singletons (images that are not in any duplicate group)
   parsedImages.forEach((img) => {
-    if (!handledPrimaryIds.has(img.id)) {
+    if (!assignedImageIds.has(img.id)) {
       uniqueImages.push(img);
     }
   });
 
-  const totalDuplicateFiles = duplicatedFileIdMap.size;
+  // Total duplicated copies (redundant files that should be removed)
+  const totalDuplicateCopies = finalDuplicateGroups.reduce((acc, g) => acc + g.totalDuplicateCopies, 0);
   const totalUniqueImages = uniqueImages.length;
+  const totalDuplicateFiles = assignedImageIds.size; // Total files participating in duplicate groups
+
+  // Exact math sanity check: totalImagesScanned === totalUniqueImages + totalDuplicateCopies
+  const totalImagesScanned = parsedImages.length;
 
   const now = new Date();
   const dateStr = now.toLocaleDateString('es-AR', {
@@ -428,11 +438,11 @@ export async function scanAndAnalyzeOperaFolder(
     folderName: rootFolderName,
     analyzedDate: dateStr,
     timestamp: Date.now(),
-    totalImagesScanned: parsedImages.length,
+    totalImagesScanned,
     totalUniqueImages,
     totalDuplicateGroups: finalDuplicateGroups.length,
+    totalDuplicateCopies,
     totalDuplicateFiles,
-    totalWastedBytes,
     duplicateGroups: finalDuplicateGroups,
     uniqueImages,
     entirelyDuplicatedFolders,
@@ -452,16 +462,15 @@ export function generateOperaTXTReport(report: OperaAnalysisReport): string {
   lines.push('======================================================================');
   lines.push('🎭 CHECK OPERA - AUDITORÍA DE IMÁGENES DUPLICADAS (IA & EXACT SIZE)');
   lines.push('======================================================================');
-  lines.push(`Carpeta Auditada:         /${report.folderName}/`);
-  lines.push(`Fecha de Análisis:        ${report.analyzedDate}`);
-  lines.push(`Formatos Admitidos:       JPG, JPEG, PNG, WEBP`);
-  lines.push(`Total Imágenes Válidas:   ${report.totalImagesScanned}`);
-  lines.push(`Imágenes Únicas:          ${report.totalUniqueImages}`);
-  lines.push(`Grupos Duplicados:        ${report.totalDuplicateGroups}`);
-  lines.push(`Archivos en Conflicto:    ${report.totalDuplicateFiles}`);
-  lines.push(`Espacio Redundante:       ${(report.totalWastedBytes / 1024).toFixed(1)} KB`);
+  lines.push(`Carpeta Auditada:               /${report.folderName}/`);
+  lines.push(`Fecha de Análisis:              ${report.analyzedDate}`);
+  lines.push(`Formatos Admitidos:             JPG, JPEG, PNG, WEBP`);
+  lines.push(`Total Imágenes Analizadas:      ${report.totalImagesScanned}`);
+  lines.push(`Imágenes Únicas (Sin repetir):  ${report.totalUniqueImages}`);
+  lines.push(`Imágenes Duplicadas (Copias):   ${report.totalDuplicateCopies} (en ${report.totalDuplicateGroups} grupos)`);
+  lines.push(`Comprobación:                   ${report.totalUniqueImages} únicas + ${report.totalDuplicateCopies} duplicadas = ${report.totalImagesScanned} total`);
   if (report.totalOmittedFiles > 0) {
-    lines.push(`Archivos Omitidos:        ${report.totalOmittedFiles} archivo(s) con formato no admitido`);
+    lines.push(`Archivos Omitidos:              ${report.totalOmittedFiles} archivo(s) con formato no admitido`);
   }
   lines.push('----------------------------------------------------------------------');
   lines.push('REGLA ESTRICTA DE OPERA DAM:');
@@ -476,13 +485,12 @@ export function generateOperaTXTReport(report: OperaAnalysisReport): string {
     report.entirelyDuplicatedFolders.forEach((folder, idx) => {
       lines.push(`[ACCIÓN RECOMENDADA #${idx + 1}]`);
       lines.push(`👉 ${folder.recommendation}`);
-      lines.push(`   • Ruta Subcarpeta: /${folder.folderPath}/`);
-      lines.push(`   • Total Archivos:   ${folder.totalImages} imágenes (100% duplicadas)`);
-      lines.push(`   • Espacio a Liberar: ${(folder.wastedBytes / 1024).toFixed(1)} KB`);
+      lines.push(`   • Ruta Subcarpeta: ${folder.folderDisplayName}`);
+      lines.push(`   • Total Archivos:   ${folder.totalImages} imágenes (100% duplicadas en otras ubicaciones)`);
       lines.push(`   • Diagnóstico:     ${folder.explanation}`);
       lines.push('   • Archivos contenidos:');
       folder.files.forEach((f) => {
-        lines.push(`       - ${f.name} (${f.dimensionsStr} px, ${f.sizeKB} KB)`);
+        lines.push(`       - ${f.name} (${f.dimensionsStr} px)`);
       });
       lines.push('');
     });
@@ -502,10 +510,10 @@ export function generateOperaTXTReport(report: OperaAnalysisReport): string {
       lines.push(`  • Descripción Visual: ${group.visualSummary}`);
       lines.push(`  • Certeza IA:         ${group.confidence}%`);
       lines.push(`  • Diagnóstico:        ${group.aiExplanation}`);
-      lines.push(`  • Copias redundantes: ${group.totalDuplicateCopies} archivo(s) | Ahorro: ${(group.wastedBytes / 1024).toFixed(1)} KB`);
+      lines.push(`  • Total archivos:     ${group.files.length} (${group.totalDuplicateCopies} copia(s) repetida(s))`);
       lines.push('  • Ubicación y archivos idénticos:');
       group.files.forEach((f, fIdx) => {
-        lines.push(`      ${fIdx + 1}. [${f.name}] -> Subcarpeta: /${f.subfolderPath}/ | Ruta: /${f.relativePath} (${f.sizeKB} KB)`);
+        lines.push(`      ${fIdx + 1}. [${f.name}] -> Subcarpeta: /${f.subfolderPath}/ | Ruta: /${f.relativePath}`);
       });
       lines.push('');
     });
@@ -516,7 +524,7 @@ export function generateOperaTXTReport(report: OperaAnalysisReport): string {
   lines.push(`✨ CATÁLOGO DE IMÁGENES ÚNICAS (${report.uniqueImages.length} ASSETS DISTINTOS):`);
   lines.push('----------------------------------------------------------------------');
   report.uniqueImages.forEach((img, idx) => {
-    lines.push(`  ${idx + 1}. ${img.name} | ${img.dimensionsStr} px | Subcarpeta: /${img.subfolderPath}/ (${img.sizeKB} KB)`);
+    lines.push(`  ${idx + 1}. ${img.name} | ${img.dimensionsStr} px | Subcarpeta: /${img.subfolderPath}/`);
   });
 
   // Omitted Files Section
@@ -526,7 +534,7 @@ export function generateOperaTXTReport(report: OperaAnalysisReport): string {
     lines.push('Formatos admitidos exclusivamente: JPG, JPEG, PNG, WEBP');
     lines.push('----------------------------------------------------------------------');
     report.omittedFiles.forEach((file, idx) => {
-      lines.push(`  ${idx + 1}. [${file.name}] -> Formato: ${file.extension} | Ruta: /${file.relativePath} (${file.sizeKB} KB)`);
+      lines.push(`  ${idx + 1}. [${file.name}] -> Formato: ${file.extension} | Ruta: /${file.relativePath}`);
       lines.push(`     Motivo: ${file.reason}`);
     });
   }
@@ -578,33 +586,37 @@ export function generateOperaPDFReport(report: OperaAnalysisReport) {
 
   y = 35;
 
-  // Metric Cards
-  const cardWidth = (pageWidth - 28 - 9) / 4;
+  // 3 Metric Cards (Exact math: Total = Únicas + Duplicadas)
+  const cardWidth = (pageWidth - 28 - 6) / 3;
   const metrics = [
-    { label: 'TOTAL IMÁGENES', val: `${report.totalImagesScanned}`, color: [30, 41, 59] },
-    { label: 'IMÁGENES ÚNICAS', val: `${report.totalUniqueImages}`, color: [16, 185, 129] },
-    { label: 'GRUPOS DUPLICADOS', val: `${report.totalDuplicateGroups}`, color: report.totalDuplicateGroups > 0 ? [225, 29, 72] : [16, 185, 129] },
-    { label: 'AHORRO POTENCIAL', val: `${(report.totalWastedBytes / 1024).toFixed(0)} KB`, color: [99, 102, 241] },
+    { label: 'TOTAL IMÁGENES', val: `${report.totalImagesScanned}`, sub: 'Auditoría en subcarpetas', color: [30, 41, 59] },
+    { label: 'IMÁGENES ÚNICAS', val: `${report.totalUniqueImages}`, sub: 'Assets sin repetición', color: [16, 185, 129] },
+    { label: 'IMÁGENES DUPLICADAS', val: `${report.totalDuplicateCopies}`, sub: `En ${report.totalDuplicateGroups} grupo(s) repetidos`, color: report.totalDuplicateCopies > 0 ? [225, 29, 72] : [16, 185, 129] },
   ];
 
   metrics.forEach((m, idx) => {
     const x = 14 + idx * (cardWidth + 3);
     doc.setFillColor(248, 250, 252);
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(x, y, cardWidth, 20, 2, 2, 'FD');
+    doc.roundedRect(x, y, cardWidth, 22, 2, 2, 'FD');
 
     doc.setFontSize(6.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(100, 116, 139);
     doc.text(m.label, x + 3, y + 6);
 
-    doc.setFontSize(12);
+    doc.setFontSize(13);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(m.color[0], m.color[1], m.color[2]);
-    doc.text(m.val, x + 3, y + 15);
+    doc.text(m.val, x + 3, y + 14);
+
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(148, 163, 184);
+    doc.text(m.sub, x + 3, y + 19);
   });
 
-  y += 26;
+  y += 28;
 
   // Notice: Entirely Duplicated Folders recommendation
   if (report.entirelyDuplicatedFolders.length > 0) {
@@ -625,7 +637,7 @@ export function generateOperaPDFReport(report: OperaAnalysisReport) {
       doc.setFontSize(7.5);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(71, 85, 105);
-      doc.text(`El 100% de su contenido (${folder.totalImages} imágenes) está duplicado en otras carpetas. Liberará ${(folder.wastedBytes / 1024).toFixed(0)} KB.`, 18, y + 12);
+      doc.text(`El 100% de su contenido (${folder.totalImages} imágenes) está duplicado en otras subcarpetas del proyecto.`, 18, y + 12);
 
       y += 22;
     });
@@ -666,7 +678,7 @@ export function generateOperaPDFReport(report: OperaAnalysisReport) {
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(51, 65, 85);
-        doc.text(`${fIdx + 1}.  ${f.name}   |   Subcarpeta: /${f.subfolderPath}/   |   ${f.sizeKB} KB`, 20, fileY);
+        doc.text(`${fIdx + 1}.  ${f.name}   |   Subcarpeta: /${f.subfolderPath}/`, 20, fileY);
         fileY += 6;
       });
 
@@ -696,7 +708,7 @@ export function generateOperaPDFReport(report: OperaAnalysisReport) {
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(22, 101, 52);
-    doc.text(`• ${uImg.name}  (${uImg.dimensionsStr} px, /${uImg.subfolderPath}/, ${uImg.sizeKB} KB)`, 18, uY);
+    doc.text(`• ${uImg.name}  (${uImg.dimensionsStr} px, /${uImg.subfolderPath}/)`, 18, uY);
     uY += 5.5;
   }
   if (report.uniqueImages.length > 10) {

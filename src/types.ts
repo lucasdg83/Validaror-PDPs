@@ -295,8 +295,9 @@ export interface OperaAnalysisReport {
   totalImagesScanned: number;
   totalUniqueImages: number;
   totalDuplicateGroups: number;
-  totalDuplicateFiles: number;
-  totalWastedBytes: number;
+  totalDuplicateCopies: number; // Exactly totalImagesScanned - totalUniqueImages
+  totalDuplicateFiles: number; // Total files participating in duplicate groups
+  totalWastedBytes?: number;
   duplicateGroups: OperaDuplicateGroup[];
   uniqueImages: OperaImageFile[];
   entirelyDuplicatedFolders: OperaEntirelyDuplicatedFolder[];

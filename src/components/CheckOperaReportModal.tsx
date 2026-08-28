@@ -134,7 +134,7 @@ export const CheckOperaReportModal: React.FC<CheckOperaReportModalProps> = ({
         {/* Modal Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin">
           {/* Executive Metrics Overview */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-1">
               <div className="text-[10px] uppercase font-bold text-slate-400">Total Imágenes</div>
               <div className="text-2xl font-black text-slate-100 font-mono">{report.totalImagesScanned}</div>
@@ -146,22 +146,17 @@ export const CheckOperaReportModal: React.FC<CheckOperaReportModalProps> = ({
               <div className="text-[11px] text-slate-400">Assets sin repetición</div>
             </div>
             <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-1">
-              <div className="text-[10px] uppercase font-bold text-slate-400">Grupos Duplicados</div>
+              <div className="text-[10px] uppercase font-bold text-slate-400">Imágenes Duplicadas</div>
               <div
                 className={`text-2xl font-black font-mono ${
-                  hasDuplicates ? 'text-rose-400' : 'text-emerald-400'
+                  report.totalDuplicateCopies > 0 ? 'text-rose-400' : 'text-emerald-400'
                 }`}
               >
-                {report.totalDuplicateGroups}
+                {report.totalDuplicateCopies}
               </div>
-              <div className="text-[11px] text-slate-400">Mismo contenido + tamaño</div>
-            </div>
-            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-1">
-              <div className="text-[10px] uppercase font-bold text-slate-400">Ahorro de Espacio</div>
-              <div className="text-2xl font-black text-pink-400 font-mono">
-                {(report.totalWastedBytes / 1024).toFixed(0)} KB
+              <div className="text-[11px] text-slate-400">
+                En {report.totalDuplicateGroups} grupo(s) con mismo contenido + tamaño
               </div>
-              <div className="text-[11px] text-slate-400">Peso en copias redundantes</div>
             </div>
           </div>
 
@@ -195,7 +190,7 @@ export const CheckOperaReportModal: React.FC<CheckOperaReportModalProps> = ({
 
                     <div className="text-right">
                       <span className="text-xs font-mono font-bold text-rose-300 px-3 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/30 inline-block">
-                        Liberará {(folder.wastedBytes / 1024).toFixed(1)} KB
+                        {folder.totalImages} archivos 100% repetidos
                       </span>
                     </div>
                   </div>
@@ -204,7 +199,7 @@ export const CheckOperaReportModal: React.FC<CheckOperaReportModalProps> = ({
                   <div className="p-3 rounded-xl bg-black/40 border border-rose-500/20 text-xs text-slate-300 space-y-1.5">
                     <div className="text-[11px] font-bold text-rose-300 uppercase tracking-wide flex items-center gap-1.5">
                       <FolderOpen className="w-3.5 h-3.5" />
-                      Archivos duplicados contenidos en /{folder.folderPath}/ ({folder.totalImages} archivos):
+                      Archivos duplicados contenidos en {folder.folderDisplayName} ({folder.totalImages} archivos):
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                       {folder.files.map((file, fIdx) => (
@@ -216,7 +211,7 @@ export const CheckOperaReportModal: React.FC<CheckOperaReportModalProps> = ({
                             {file.name}
                           </span>
                           <span className="text-slate-400 font-mono text-[10px]">
-                            {file.dimensionsStr} • {file.sizeKB} KB
+                            {file.dimensionsStr}
                           </span>
                         </div>
                       ))}
@@ -316,7 +311,7 @@ export const CheckOperaReportModal: React.FC<CheckOperaReportModalProps> = ({
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-[11px] font-mono text-slate-400">
-                            {group.files.length} copias idénticas • {(group.wastedBytes / 1024).toFixed(0)} KB redundantes
+                            {group.files.length} archivos ({group.totalDuplicateCopies} copia{group.totalDuplicateCopies > 1 ? 's' : ''} repetida{group.totalDuplicateCopies > 1 ? 's' : ''})
                           </span>
                           <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[10px] font-mono font-bold">
                             IA {group.confidence}% certeza
@@ -509,7 +504,7 @@ export const CheckOperaReportModal: React.FC<CheckOperaReportModalProps> = ({
           <div className="flex items-center gap-2 text-xs text-slate-400">
             <HardDrive className="w-4 h-4 text-pink-400" />
             <span>
-              {report.totalDuplicateGroups} grupos duplicados ({report.totalDuplicateFiles} archivos en conflicto)
+              {report.totalDuplicateCopies} imágenes duplicadas en {report.totalDuplicateGroups} grupo(s) • {report.totalImagesScanned} total analizadas
             </span>
           </div>
 
