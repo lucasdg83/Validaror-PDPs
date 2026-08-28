@@ -153,7 +153,7 @@ export default function App() {
             <div className="text-center max-w-3xl mx-auto space-y-4">
               {/* Main Typography Lockup */}
               <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-slate-100 uppercase">
-                DESIGN <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-indigo-200 to-pink-300 drop-shadow-[0_0_25px_rgba(129,140,248,0.25)]">HUB</span>
+                IA TEST <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-indigo-200 to-pink-300 drop-shadow-[0_0_25px_rgba(129,140,248,0.25)]">PRODU</span>
               </h1>
 
               {/* Minimal Editorial Subtitle */}
@@ -263,7 +263,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="h-12 border-t border-white/5 flex items-center justify-center px-6 sm:px-8 bg-black/40 text-[10px] text-slate-500 font-mono relative z-10 backdrop-blur-md">
-        <div>&copy; 2026 VALIDADOR DE PDPS Y ADAPTACIONES • DIGITAL E-RETAIL SOLUTIONS</div>
+        <div>Content Factory VML LATAM Loreal &copy; 2026</div>
       </footer>
 
       {/* Primary Report Modal (Text & Visual views) */}
