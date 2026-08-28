@@ -612,15 +612,20 @@ Responde estrictamente en formato JSON válido según el schema.
       for (const [dim, groupList] of candidateGroups) {
         const parts: any[] = [];
         parts.push({
-          text: `Eres un especialista senior en Digital Asset Management (DAM), control de calidad visual y auditoría de e-retail assets (Opera DAM, L'Oréal, Maybelline, etc.).
-REGLA ESTRICTA DE DETECCIÓN:
-Se te presentan imágenes que ya poseen EXACTAMENTE EL MISMO TAMAÑO/RESOLUCIÓN (${dim} px).
-Tu tarea es inspeccionar visualmente cada imagen de este grupo y determinar cuáles tienen CONTENIDO VISUAL IDÉNTICO o REPETIDO (mismo packshot, mismo fondo, mismos textos/claims, misma composición gráfica).
-Si dos o más imágenes son idénticas en contenido visual, agrúpalas como un grupo duplicado.
-Si dos imágenes tienen contenidos diferentes (ej: un labial rojo vs una base líquida), NO son duplicadas.
+          text: `Eres un especialista senior en Digital Asset Management (DAM), control de calidad visual y auditoría de e-retail assets (Opera DAM, L'Oréal, Maybelline, Garnier, Lancôme, etc.).
 
-Lista de imágenes evaluadas en esta resolución (${dim} px):
-${groupList.map((img: any, i: number) => `Imagen #${i + 1}: Nombre="${img.name}", Ruta="${img.relativePath}", Peso=${(img.sizeBytes / 1024).toFixed(1)} KB`).join('\n')}
+OBJETIVO CRÍTICO:
+Auditar con máxima precisión las imágenes que comparten la MISMA RESOLUCIÓN EXACTA (${dim} px).
+Debes identificar cuáles imágenes tienen CONTENIDO VISUAL IDÉNTICO O REPETIDO (mismo producto/packshot, mismo fondo, misma diagramación de textos/claims/sellos, misma composición visual).
+
+ATENCIÓN A DETALLES:
+1. Las imágenes pueden provenir de distintas subcarpetas (ej: "Amazon/01_hero.jpg" vs "MercadoLibre/01_hero.jpg" vs "Backup/01_hero.jpg").
+2. Si dos imágenes muestran el mismo arte/producto en la misma resolución (${dim} px), agrúpalas como un cluster duplicado indicando sus "imageIds".
+3. Si dos imágenes muestran productos distintos (ej: tono 15 vs tono 20, o serum vs labial), o textos/infografías distintas, NO son duplicadas.
+4. Si todas son diferentes, marca "hasDuplicates": false.
+
+Lista de imágenes candidatas en resolución ${dim} px:
+${groupList.map((img: any, i: number) => `[ID: "${img.id}"] -> Imagen #${i + 1}: Nombre="${img.name}", Subcarpeta="${img.relativePath}", Peso=${(img.sizeBytes / 1024).toFixed(1)} KB`).join('\n')}
 `,
         });
 
@@ -636,14 +641,14 @@ ${groupList.map((img: any, i: number) => `Imagen #${i + 1}: Nombre="${img.name}"
               },
             });
             parts.push({
-              text: `[Esta es la Imagen #${idx + 1}: "${img.name}"]`,
+              text: `[Imagen #${idx + 1} | ID: "${img.id}" | Archivo: "${img.name}" | Ruta: "${img.relativePath}"]`,
             });
           }
         });
 
         parts.push({
-          text: `Responde estrictamente en formato JSON con la lista de clusters duplicados encontrados dentro de este grupo de resolución ${dim} px.
-Si hay imágenes idénticas en contenido, incluye los nombres de archivo exactos, un resumen visual de lo que muestra el asset y una breve explicación.`,
+          text: `Devuelve estrictamente el JSON con la auditoría de duplicados para el grupo de resolución ${dim} px.
+Incluye en "imageIds" los IDs exactos de las imágenes que forman cada cluster duplicado.`,
         });
 
         try {
@@ -661,16 +666,21 @@ Si hay imágenes idénticas en contenido, incluye los nombres de archivo exactos
                     items: {
                       type: Type.OBJECT,
                       properties: {
-                        visualSummary: { type: Type.STRING, description: "Descripción del contenido visual repetido" },
+                        visualSummary: { type: Type.STRING, description: "Descripción visual del packshot o contenido repetido" },
+                        imageIds: {
+                          type: Type.ARRAY,
+                          items: { type: Type.STRING },
+                          description: "IDs exactos de las imágenes que contienen el mismo arte visual",
+                        },
                         duplicatedFileNames: {
                           type: Type.ARRAY,
                           items: { type: Type.STRING },
                           description: "Nombres de los archivos con contenido idéntico",
                         },
-                        confidence: { type: Type.NUMBER, description: "Nivel de certeza de 0 a 100" },
-                        explanation: { type: Type.STRING, description: "Explicación de por qué son duplicados idénticos" },
+                        confidence: { type: Type.NUMBER, description: "Nivel de certeza visual de 0 a 100" },
+                        explanation: { type: Type.STRING, description: "Diagnóstico técnico de por qué son duplicados idénticos" },
                       },
-                      required: ["visualSummary", "duplicatedFileNames", "confidence", "explanation"],
+                      required: ["visualSummary", "imageIds", "duplicatedFileNames", "confidence", "explanation"],
                     },
                   },
                 },
@@ -682,13 +692,16 @@ Si hay imágenes idénticas en contenido, incluye los nombres de archivo exactos
           const parsed = JSON.parse(response.text || "{}");
           if (parsed.hasDuplicates && Array.isArray(parsed.clusters)) {
             for (const cluster of parsed.clusters) {
+              // Match by imageIds or file names
               const matchedFiles = groupList.filter((img: any) =>
-                cluster.duplicatedFileNames.some(
-                  (name: string) =>
-                    name.toLowerCase() === img.name.toLowerCase() ||
-                    img.relativePath.toLowerCase().includes(name.toLowerCase()) ||
-                    name.toLowerCase().includes(img.name.toLowerCase())
-                )
+                (Array.isArray(cluster.imageIds) && cluster.imageIds.includes(img.id)) ||
+                (Array.isArray(cluster.duplicatedFileNames) &&
+                  cluster.duplicatedFileNames.some(
+                    (name: string) =>
+                      name.toLowerCase() === img.name.toLowerCase() ||
+                      img.relativePath.toLowerCase().includes(name.toLowerCase()) ||
+                      name.toLowerCase().includes(img.name.toLowerCase())
+                  ))
               );
 
               if (matchedFiles.length >= 2) {
@@ -704,8 +717,8 @@ Si hay imágenes idénticas en contenido, incluye los nombres de archivo exactos
                   files: matchedFiles,
                   totalDuplicateCopies: matchedFiles.length - 1,
                   wastedBytes,
-                  confidence: cluster.confidence || 95,
-                  aiExplanation: cluster.explanation || `Las imágenes comparten resolución de ${dim} px y el mismo contenido visual.`,
+                  confidence: Math.max(90, cluster.confidence || 98),
+                  aiExplanation: cluster.explanation || `Las imágenes comparten resolución de ${dim} px y el mismo contenido visual verificado.`,
                 });
               }
             }

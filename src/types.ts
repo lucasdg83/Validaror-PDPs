@@ -239,6 +239,7 @@ export interface OperaImageFile {
   id: string;
   name: string;
   relativePath: string;
+  subfolderPath: string; // e.g. "Amazon/Main" or ""
   sizeBytes: number;
   sizeKB: number;
   width: number;
@@ -266,11 +267,24 @@ export interface OperaDuplicateGroup {
   aiExplanation: string;
 }
 
-export interface OperaDifferentSizeItem {
+export interface OperaEntirelyDuplicatedFolder {
+  folderPath: string; // e.g. "Opera_DAM_Export/MercadoLibre_Backup"
+  folderDisplayName: string; // e.g. "MercadoLibre_Backup"
+  totalImages: number;
+  wastedBytes: number;
+  recommendation: string; // "Se debe eliminar la carpeta '...' completa"
+  explanation: string;
+  files: OperaImageFile[];
+}
+
+export interface OperaOmittedFile {
   id: string;
-  imageA: OperaImageFile;
-  imageB: OperaImageFile;
-  reason: string; // "Mismo contenido pero diferente tamaño -> NO se clasifica como duplicado"
+  name: string;
+  relativePath: string;
+  extension: string;
+  sizeBytes: number;
+  sizeKB: number;
+  reason: string;
 }
 
 export interface OperaAnalysisReport {
@@ -284,9 +298,12 @@ export interface OperaAnalysisReport {
   totalDuplicateFiles: number;
   totalWastedBytes: number;
   duplicateGroups: OperaDuplicateGroup[];
-  differentSizeIgnored: OperaDifferentSizeItem[];
-  allImages: OperaImageFile[];
+  uniqueImages: OperaImageFile[];
+  entirelyDuplicatedFolders: OperaEntirelyDuplicatedFolder[];
+  omittedFiles: OperaOmittedFile[];
+  totalOmittedFiles: number;
   rawTxtReport: string;
 }
+
 
 

@@ -7,17 +7,15 @@ import {
   Image as ImageIcon,
   Trash2,
   Sparkles,
-  Search,
-  Download,
-  Layers,
   ShieldCheck,
-  CheckCircle2,
-  Maximize2,
-  HelpCircle,
+  FolderTree,
+  AlertTriangle,
+  FolderOpen,
 } from 'lucide-react';
 import {
   scanAndAnalyzeOperaFolder,
   generateDemoOperaFiles,
+  ALLOWED_IMAGE_EXTENSIONS,
 } from '../utils/operaChecker';
 import { CheckOperaReportModal } from './CheckOperaReportModal';
 
@@ -42,12 +40,13 @@ export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
 
   const folderInputRef = useRef<HTMLInputElement>(null);
 
-  // Filter image files
-  const imageExtensions = ['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif', 'bmp', 'tiff'];
-  const imageFiles = selectedFiles.filter((f) => {
+  // Filter image files by strictly allowed extensions: JPG, JPEG, PNG, WEBP
+  const validImageFiles = selectedFiles.filter((f) => {
     const ext = f.name.split('.').pop()?.toLowerCase() || '';
-    return imageExtensions.includes(ext);
+    return ALLOWED_IMAGE_EXTENSIONS.includes(ext);
   });
+
+  const omittedCount = selectedFiles.length - validImageFiles.length;
 
   const handleFolderSelection = (fileList: FileList | File[]) => {
     const files = Array.from(fileList);
@@ -65,11 +64,11 @@ export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
 
     const imgs = files.filter((f) => {
       const ext = f.name.split('.').pop()?.toLowerCase() || '';
-      return imageExtensions.includes(ext);
+      return ALLOWED_IMAGE_EXTENSIONS.includes(ext);
     });
 
     if (imgs.length === 0) {
-      setValidationAlert('La carpeta seleccionada no contiene archivos de imagen válidos (.jpg, .png, .webp).');
+      setValidationAlert('La carpeta seleccionada no contiene archivos de imagen válidos en formatos permitidos (JPG, JPEG, PNG, WEBP).');
       return;
     }
 
@@ -95,7 +94,7 @@ export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
 
     setValidationAlert(null);
     setIsAnalyzing(true);
-    setAnalysisStatus('Iniciando lectura de archivos y dimensiones...');
+    setAnalysisStatus('Iniciando lectura de subcarpetas, formatos y firmas visuales...');
 
     try {
       const report = await scanAndAnalyzeOperaFolder(
@@ -115,10 +114,10 @@ export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
     }
   };
 
-  // Load sample demo folder
+  // Load sample demo folder (includes subfolders, 100% redundant folder, and non-image omitted files)
   const handleLoadDemo = async () => {
     setIsAnalyzing(true);
-    setAnalysisStatus('Generando carpeta demo con duplicados y diferentes resoluciones...');
+    setAnalysisStatus('Generando estructura demo con subcarpetas, carpetas redundantes y formatos varios...');
     try {
       const demoFiles = await generateDemoOperaFiles();
       setRootFolderName('Opera_DAM_Export_Demo');
@@ -162,7 +161,7 @@ export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
               Check Opera
             </h2>
             <p className="text-xs text-pink-300 font-medium">
-              Auditoría Inteligente de Duplicados en Repositorios & Opera DAM
+              Auditoría Inteligente de Duplicados en Repositorios & Subcarpetas
             </p>
           </div>
         </div>
@@ -170,25 +169,42 @@ export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
         <button
           onClick={handleLoadDemo}
           disabled={isAnalyzing}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/20 text-xs font-semibold transition-colors"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/20 text-xs font-semibold transition-colors"
         >
           <Sparkles className="w-3.5 h-3.5" />
-          <span>Cargar Carpeta Demo</span>
+          <span>Cargar Carpeta Demo con Subcarpetas</span>
         </button>
       </div>
 
-      {/* Strict Rule Callout Card */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-pink-950/40 via-purple-950/20 to-slate-900/40 border border-pink-500/30 backdrop-blur-xl space-y-2">
-        <div className="flex items-center gap-2 text-pink-400 font-bold text-xs uppercase tracking-wider">
-          <ShieldCheck className="w-4 h-4 text-pink-400" />
-          <span>Regla de Detección de Check Opera</span>
+      {/* Strict Rules & Parameters Callout Card */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-pink-950/40 via-purple-950/20 to-slate-900/40 border border-pink-500/30 backdrop-blur-xl space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-pink-400 font-bold text-xs uppercase tracking-wider">
+            <ShieldCheck className="w-4 h-4 text-pink-400" />
+            <span>Reglas de Análisis en Check Opera</span>
+          </div>
+          <span className="px-2.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 text-[11px] font-mono font-bold border border-pink-500/30">
+            Formatos: JPG • JPEG • PNG • WEBP
+          </span>
         </div>
+
         <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
-          La IA examina todos los archivos del directorio para identificar aquellas imágenes que estén <strong className="text-pink-300">repetidas en contenido visual + mismo tamaño (resolución idéntica en píxeles)</strong>.
+          La IA examina todos los archivos del directorio y <strong className="text-pink-300">recorre recursivamente todas sus subcarpetas</strong> para identificar aquellas imágenes que estén <strong className="text-pink-300">repetidas en contenido visual + mismo tamaño exacto</strong>.
         </p>
-        <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-400 font-mono">
-          <span className="text-pink-400 font-bold">✓</span>
-          <span>Imágenes con el mismo contenido pero de distinto tamaño (ej: 1200x1200 vs 1460x600) se consideran adaptaciones intencionales y <strong>NO</strong> se alertan como duplicadas.</span>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-[11px] text-slate-300 font-mono">
+          <div className="p-2 rounded-lg bg-black/30 border border-white/5 flex items-center gap-2">
+            <FolderTree className="w-3.5 h-3.5 text-pink-400 flex-shrink-0" />
+            <span>Soporte de subcarpetas multinivel</span>
+          </div>
+          <div className="p-2 rounded-lg bg-black/30 border border-white/5 flex items-center gap-2">
+            <span className="text-emerald-400 font-bold">✓</span>
+            <span>Alerta de carpetas 100% duplicadas</span>
+          </div>
+          <div className="p-2 rounded-lg bg-black/30 border border-white/5 flex items-center gap-2">
+            <span className="text-amber-400 font-bold">ℹ</span>
+            <span>Reporte de formatos omitidos</span>
+          </div>
         </div>
       </div>
 
@@ -258,7 +274,7 @@ export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
               Subir Carpeta de Cualquier Dispositivo
             </h3>
             <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto mb-4">
-              Arrastra una carpeta aquí o haz clic para explorar en tu computadora, pendrive o almacenamiento en la nube.
+              Arrastra una carpeta aquí o haz clic para explorar en tu computadora. Se analizarán imágenes en formatos <strong>JPG, JPEG, PNG, WEBP</strong> incluyendo todas las subcarpetas.
             </p>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-pink-500/20 transition-all">
               <FolderUp className="w-4 h-4" />
@@ -271,7 +287,7 @@ export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
             <div className="p-5 rounded-2xl bg-white/[0.03] border border-pink-500/30 flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
                 <div className="w-12 h-12 rounded-xl bg-pink-500/20 border border-pink-500/30 flex items-center justify-center text-pink-300">
-                  <FolderUp className="w-6 h-6" />
+                  <FolderOpen className="w-6 h-6" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -283,7 +299,9 @@ export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    {imageFiles.length} archivos de imagen detectados ({((selectedFiles.reduce((acc, f) => acc + f.size, 0)) / 1024 / 1024).toFixed(1)} MB total)
+                    {validImageFiles.length} imágenes válidas (JPG, JPEG, PNG, WEBP)
+                    {omittedCount > 0 && ` • ${omittedCount} archivo(s) omitidos por formato`}
+                    {' '}({((selectedFiles.reduce((acc, f) => acc + f.size, 0)) / 1024 / 1024).toFixed(1)} MB total)
                   </p>
                 </div>
               </div>
@@ -302,31 +320,34 @@ export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
             {/* Quick Preview Grid */}
             <div className="space-y-2">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                <span>Muestra de Archivos a Inspeccionar ({imageFiles.length})</span>
-                <span className="text-[11px] font-mono text-slate-500">Formatos: JPG, PNG, WEBP</span>
+                <span>Muestra de Archivos a Inspeccionar ({validImageFiles.length})</span>
+                <span className="text-[11px] font-mono text-pink-300">Formatos: JPG, JPEG, PNG, WEBP</span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2.5 max-h-[220px] overflow-y-auto p-1 scrollbar-thin">
-                {imageFiles.slice(0, 18).map((file, idx) => (
-                  <div
-                    key={idx}
-                    className="p-2 rounded-xl bg-white/[0.02] border border-white/5 space-y-1 hover:border-white/20 transition-colors"
-                  >
-                    <div className="aspect-square w-full rounded-lg bg-black/40 flex items-center justify-center text-slate-500 text-xs font-mono">
-                      <ImageIcon className="w-5 h-5 text-pink-400/60" />
+                {validImageFiles.slice(0, 18).map((file, idx) => {
+                  const rel = (file as any).webkitRelativePath || file.name;
+                  return (
+                    <div
+                      key={idx}
+                      className="p-2 rounded-xl bg-white/[0.02] border border-white/5 space-y-1 hover:border-white/20 transition-colors"
+                    >
+                      <div className="aspect-square w-full rounded-lg bg-black/40 flex items-center justify-center text-slate-500 text-xs font-mono">
+                        <ImageIcon className="w-5 h-5 text-pink-400/60" />
+                      </div>
+                      <div className="text-[10px] font-bold text-slate-200 truncate" title={file.name}>
+                        {file.name}
+                      </div>
+                      <div className="text-[9px] text-slate-400 font-mono truncate" title={rel}>
+                        /{rel.split('/').slice(1, -1).join('/') || 'raíz'}
+                      </div>
                     </div>
-                    <div className="text-[10px] font-bold text-slate-200 truncate" title={file.name}>
-                      {file.name}
-                    </div>
-                    <div className="text-[9px] text-slate-400 font-mono">
-                      {(file.size / 1024).toFixed(0)} KB
-                    </div>
-                  </div>
-                ))}
-                {imageFiles.length > 18 && (
+                  );
+                })}
+                {validImageFiles.length > 18 && (
                   <div className="p-2 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-center text-center">
                     <span className="text-[11px] font-mono text-slate-400">
-                      +{imageFiles.length - 18} más
+                      +{validImageFiles.length - 18} más
                     </span>
                   </div>
                 )}
@@ -342,7 +363,7 @@ export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
             <span>
               {selectedFiles.length === 0
                 ? 'Sube una carpeta para habilitar el análisis de duplicados con IA.'
-                : `${imageFiles.length} imágenes listas para chequear repetición en contenido y tamaño.`}
+                : `${validImageFiles.length} imágenes listas para chequear repetición en contenido y tamaño.`}
             </span>
           </div>
 
