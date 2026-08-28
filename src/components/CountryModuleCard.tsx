@@ -17,6 +17,7 @@ export const CountryModuleCard: React.FC<CountryModuleCardProps> = ({
 }) => {
   const isPending = country.status === 'pending';
   const isAdaptation = country.code === 'ADAPTACIONES' || country.isAdaptationModule;
+  const isOpera = country.code === 'CHECK_OPERA' || country.isOperaModule;
   const retailerNames = country.description.split(', ').map((s) => s.trim());
 
   return (
@@ -32,18 +33,23 @@ export const CountryModuleCard: React.FC<CountryModuleCardProps> = ({
           </div>
           <div>
             <h3 className="text-lg sm:text-xl font-bold text-slate-100 group-hover:text-indigo-300 transition-colors">
-              {isAdaptation ? 'ADAPTACIONES' : `PDP ${country.code}`}
+              {isAdaptation ? 'ADAPTACIONES' : isOpera ? 'CHECK OPERA' : `PDP ${country.code}`}
             </h3>
             {isAdaptation && (
               <span className="inline-block text-[10px] uppercase tracking-wider font-semibold text-indigo-400">
                 Brief PPT / PDF
               </span>
             )}
+            {isOpera && (
+              <span className="inline-block text-[10px] uppercase tracking-wider font-semibold text-pink-400">
+                Detección de Duplicados
+              </span>
+            )}
           </div>
         </div>
 
         <div className="flex items-center gap-1.5">
-          {!isAdaptation && onEditSpecs && (
+          {!isAdaptation && !isOpera && onEditSpecs && (
             <button
               type="button"
               title={`Configurar especificaciones técnicas de ${country.name}`}
@@ -69,6 +75,8 @@ export const CountryModuleCard: React.FC<CountryModuleCardProps> = ({
               className={`text-[11px] font-medium px-2 py-0.5 rounded-md border ${
                 isAdaptation
                   ? 'bg-indigo-500/10 text-indigo-200 border-indigo-500/20'
+                  : isOpera
+                  ? 'bg-pink-500/10 text-pink-200 border-pink-500/20'
                   : 'bg-white/5 text-slate-300 border border-white/5'
               }`}
             >
@@ -88,10 +96,14 @@ export const CountryModuleCard: React.FC<CountryModuleCardProps> = ({
         id={`btn-analizar-${country.code.toLowerCase()}`}
         onClick={() => onSelect(country)}
         disabled={isLoading}
-        className="w-full relative flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-xs tracking-wider uppercase transition-all shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/35 bg-indigo-500 hover:bg-indigo-600 text-white border border-indigo-400/30 active:scale-[0.98]"
+        className={`w-full relative flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-xs tracking-wider uppercase transition-all shadow-lg text-white border active:scale-[0.98] ${
+          isOpera
+            ? 'shadow-pink-500/20 hover:shadow-pink-500/35 bg-pink-600 hover:bg-pink-500 border-pink-400/30'
+            : 'shadow-indigo-500/20 hover:shadow-indigo-500/35 bg-indigo-500 hover:bg-indigo-600 border-indigo-400/30'
+        }`}
       >
         <FolderSearch className="w-4 h-4 text-white" />
-        <span>Validar Carpeta</span>
+        <span>{isOpera ? 'Abrir Check Opera' : 'Validar Carpeta'}</span>
         <ChevronRight className="w-4 h-4 opacity-70 group-hover:translate-x-1 transition-transform" />
       </button>
     </div>

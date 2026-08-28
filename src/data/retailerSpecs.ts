@@ -50,6 +50,15 @@ export const COUNTRIES: CountryInfo[] = [
     expectedRetailersCount: 0,
     isAdaptationModule: true,
   },
+  {
+    code: 'CHECK_OPERA',
+    name: 'Check Opera',
+    flag: '🎭',
+    description: 'Detección IA de imágenes duplicadas (mismo contenido visual + idéntico tamaño/resolución)',
+    status: 'active',
+    expectedRetailersCount: 0,
+    isOperaModule: true,
+  },
 ];
 
 export const ARGENTINA_SPECS: RetailerSpec[] = [

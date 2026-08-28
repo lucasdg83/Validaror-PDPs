@@ -1,6 +1,6 @@
 {
   "name": "Validador de PDPs y Adaptaciones",
-  "description": "Herramienta de auditoría y validación técnica de Product Detail Pages (PDP) y módulo de Adaptaciones con soporte para specs en PPT/PDF/DOC/DOCX y analizador inteligente de pedidos de PM con exportación a PDF.",
+  "description": "Herramienta de auditoría y validación técnica de Product Detail Pages (PDP), módulo de Adaptaciones con lector de briefs de PM, y Check Opera para detección inteligente de imágenes duplicadas por contenido y tamaño exacto.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

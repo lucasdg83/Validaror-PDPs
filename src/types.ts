@@ -1,4 +1,4 @@
-export type CountryCode = 'AR' | 'UY' | 'CL' | 'MX' | 'CERAN' | 'ADAPTACIONES';
+export type CountryCode = 'AR' | 'UY' | 'CL' | 'MX' | 'CERAN' | 'ADAPTACIONES' | 'CHECK_OPERA';
 
 export interface CountryInfo {
   code: CountryCode;
@@ -8,6 +8,7 @@ export interface CountryInfo {
   status: 'active' | 'pending';
   expectedRetailersCount: number;
   isAdaptationModule?: boolean;
+  isOperaModule?: boolean;
 }
 
 export interface RetailerSpec {
@@ -233,4 +234,59 @@ export interface BriefAnalysisResult {
   ambiguities: BriefAmbiguity[];
   plainTextReport: string;
 }
+
+export interface OperaImageFile {
+  id: string;
+  name: string;
+  relativePath: string;
+  sizeBytes: number;
+  sizeKB: number;
+  width: number;
+  height: number;
+  aspectRatio: string;
+  dimensionsStr: string; // e.g. "1200x1200"
+  extension: string;
+  previewUrl?: string;
+  thumbnailBase64?: string;
+  hash?: string;
+  fileObj?: File;
+}
+
+export interface OperaDuplicateGroup {
+  groupId: string;
+  dimensionsStr: string; // e.g. "1200x1200"
+  width: number;
+  height: number;
+  aspectRatio: string;
+  visualSummary: string; // Resumen del contenido visual
+  files: OperaImageFile[];
+  totalDuplicateCopies: number; // copias redundantes
+  wastedBytes: number;
+  confidence: number; // 0-100
+  aiExplanation: string;
+}
+
+export interface OperaDifferentSizeItem {
+  id: string;
+  imageA: OperaImageFile;
+  imageB: OperaImageFile;
+  reason: string; // "Mismo contenido pero diferente tamaño -> NO se clasifica como duplicado"
+}
+
+export interface OperaAnalysisReport {
+  id: string;
+  folderName: string;
+  analyzedDate: string;
+  timestamp: number;
+  totalImagesScanned: number;
+  totalUniqueImages: number;
+  totalDuplicateGroups: number;
+  totalDuplicateFiles: number;
+  totalWastedBytes: number;
+  duplicateGroups: OperaDuplicateGroup[];
+  differentSizeIgnored: OperaDifferentSizeItem[];
+  allImages: OperaImageFile[];
+  rawTxtReport: string;
+}
+
 

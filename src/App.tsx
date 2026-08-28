@@ -5,6 +5,7 @@ import { Header } from './components/Header';
 import { CountryModuleCard } from './components/CountryModuleCard';
 import { FolderDropZone } from './components/FolderDropZone';
 import { AdaptationsDropZone } from './components/AdaptationsDropZone';
+import { CheckOperaDropZone } from './components/CheckOperaDropZone';
 import { ReportModal } from './components/ReportModal';
 import { AdaptationReportModal } from './components/AdaptationReportModal';
 import { SpecsViewerModal } from './components/SpecsViewerModal';
@@ -57,7 +58,7 @@ export default function App() {
   };
 
   const handleOpenEditSpecsForCountry = (country: CountryInfo) => {
-    if (country.code === 'ADAPTACIONES') return;
+    if (country.code === 'ADAPTACIONES' || country.code === 'CHECK_OPERA') return;
     setSpecsModalInitialCountry(country.code);
     setIsSpecsModalOpen(true);
   };
@@ -234,6 +235,12 @@ export default function App() {
             onBack={() => setSelectedCountry(null)}
             isProcessing={isProcessing}
             progress={adaptationProgress}
+          />
+        ) : selectedCountry.code === 'CHECK_OPERA' ? (
+          /* Active CHECK OPERA Drop Zone View */
+          <CheckOperaDropZone
+            country={selectedCountry}
+            onBack={() => setSelectedCountry(null)}
           />
         ) : (
           /* Active Country Drop Zone & Audit View */

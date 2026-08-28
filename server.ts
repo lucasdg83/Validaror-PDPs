@@ -572,6 +572,162 @@ Responde estrictamente en formato JSON válido según el schema.
     }
   });
 
+  // Check Opera endpoint: Duplicate Image Detection (Identical Content + Identical Size ONLY)
+  app.post("/api/opera/check-duplicates", async (req, res) => {
+    try {
+      const { images, rootFolderName } = req.body;
+      if (!images || !Array.isArray(images) || images.length === 0) {
+        return res.status(400).json({ error: "Falta la lista de imágenes para analizar." });
+      }
+
+      const ai = getGenAI();
+      if (!ai) {
+        return res.json({
+          fallback: true,
+          message: "Modo local: Gemini no configurado. Se utiliza análisis perceptual y matricial de dimensiones.",
+        });
+      }
+
+      // Group images by dimension string
+      const dimensionGroups: Record<string, any[]> = {};
+      for (const img of images) {
+        const dim = `${img.width}x${img.height}`;
+        if (!dimensionGroups[dim]) dimensionGroups[dim] = [];
+        dimensionGroups[dim].push(img);
+      }
+
+      // Filter groups that have 2 or more images with identical dimensions
+      const candidateGroups = Object.entries(dimensionGroups).filter(([_, list]) => list.length >= 2);
+
+      if (candidateGroups.length === 0) {
+        return res.json({
+          success: true,
+          duplicateGroups: [],
+          summary: "No se encontraron imágenes que compartan las mismas dimensiones en la carpeta.",
+        });
+      }
+
+      const duplicateGroupsResult: any[] = [];
+
+      for (const [dim, groupList] of candidateGroups) {
+        const parts: any[] = [];
+        parts.push({
+          text: `Eres un especialista senior en Digital Asset Management (DAM), control de calidad visual y auditoría de e-retail assets (Opera DAM, L'Oréal, Maybelline, etc.).
+REGLA ESTRICTA DE DETECCIÓN:
+Se te presentan imágenes que ya poseen EXACTAMENTE EL MISMO TAMAÑO/RESOLUCIÓN (${dim} px).
+Tu tarea es inspeccionar visualmente cada imagen de este grupo y determinar cuáles tienen CONTENIDO VISUAL IDÉNTICO o REPETIDO (mismo packshot, mismo fondo, mismos textos/claims, misma composición gráfica).
+Si dos o más imágenes son idénticas en contenido visual, agrúpalas como un grupo duplicado.
+Si dos imágenes tienen contenidos diferentes (ej: un labial rojo vs una base líquida), NO son duplicadas.
+
+Lista de imágenes evaluadas en esta resolución (${dim} px):
+${groupList.map((img: any, i: number) => `Imagen #${i + 1}: Nombre="${img.name}", Ruta="${img.relativePath}", Peso=${(img.sizeBytes / 1024).toFixed(1)} KB`).join('\n')}
+`,
+        });
+
+        groupList.forEach((img: any, idx: number) => {
+          if (img.thumbnailBase64) {
+            const rawB64 = img.thumbnailBase64.includes(",")
+              ? img.thumbnailBase64.split(",")[1]
+              : img.thumbnailBase64;
+            parts.push({
+              inlineData: {
+                mimeType: "image/jpeg",
+                data: rawB64,
+              },
+            });
+            parts.push({
+              text: `[Esta es la Imagen #${idx + 1}: "${img.name}"]`,
+            });
+          }
+        });
+
+        parts.push({
+          text: `Responde estrictamente en formato JSON con la lista de clusters duplicados encontrados dentro de este grupo de resolución ${dim} px.
+Si hay imágenes idénticas en contenido, incluye los nombres de archivo exactos, un resumen visual de lo que muestra el asset y una breve explicación.`,
+        });
+
+        try {
+          const response = await ai.models.generateContent({
+            model: "gemini-3.7-flash",
+            contents: parts,
+            config: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  hasDuplicates: { type: Type.BOOLEAN },
+                  clusters: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        visualSummary: { type: Type.STRING, description: "Descripción del contenido visual repetido" },
+                        duplicatedFileNames: {
+                          type: Type.ARRAY,
+                          items: { type: Type.STRING },
+                          description: "Nombres de los archivos con contenido idéntico",
+                        },
+                        confidence: { type: Type.NUMBER, description: "Nivel de certeza de 0 a 100" },
+                        explanation: { type: Type.STRING, description: "Explicación de por qué son duplicados idénticos" },
+                      },
+                      required: ["visualSummary", "duplicatedFileNames", "confidence", "explanation"],
+                    },
+                  },
+                },
+                required: ["hasDuplicates", "clusters"],
+              },
+            },
+          });
+
+          const parsed = JSON.parse(response.text || "{}");
+          if (parsed.hasDuplicates && Array.isArray(parsed.clusters)) {
+            for (const cluster of parsed.clusters) {
+              const matchedFiles = groupList.filter((img: any) =>
+                cluster.duplicatedFileNames.some(
+                  (name: string) =>
+                    name.toLowerCase() === img.name.toLowerCase() ||
+                    img.relativePath.toLowerCase().includes(name.toLowerCase()) ||
+                    name.toLowerCase().includes(img.name.toLowerCase())
+                )
+              );
+
+              if (matchedFiles.length >= 2) {
+                const totalBytes = matchedFiles.reduce((acc: number, f: any) => acc + f.sizeBytes, 0);
+                const wastedBytes = totalBytes - matchedFiles[0].sizeBytes;
+                duplicateGroupsResult.push({
+                  groupId: `dup-${dim}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+                  dimensionsStr: dim,
+                  width: groupList[0].width,
+                  height: groupList[0].height,
+                  aspectRatio: groupList[0].aspectRatio,
+                  visualSummary: cluster.visualSummary || "Asset gráfico con contenido idéntico",
+                  files: matchedFiles,
+                  totalDuplicateCopies: matchedFiles.length - 1,
+                  wastedBytes,
+                  confidence: cluster.confidence || 95,
+                  aiExplanation: cluster.explanation || `Las imágenes comparten resolución de ${dim} px y el mismo contenido visual.`,
+                });
+              }
+            }
+          }
+        } catch (groupErr) {
+          console.warn("Failed Gemini analysis for dimension group:", dim, groupErr);
+        }
+      }
+
+      return res.json({
+        success: true,
+        duplicateGroups: duplicateGroupsResult,
+      });
+    } catch (err: any) {
+      console.error("Error in /api/opera/check-duplicates:", err);
+      return res.status(500).json({
+        error: "Ocurrió un error al chequear duplicados con IA.",
+        details: err?.message || String(err),
+      });
+    }
+  });
+
   // Vite middleware in development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
