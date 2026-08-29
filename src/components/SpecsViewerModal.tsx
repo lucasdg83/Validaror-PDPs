@@ -26,13 +26,20 @@ interface SpecsViewerModalProps {
   onSpecsUpdated?: () => void;
 }
 
+const PDP_COUNTRIES = COUNTRIES.filter(
+  (c) => !c.isOperaModule && !c.isAdaptationModule && c.code !== 'CHECK_OPERA' && c.code !== 'ADAPTACIONES'
+);
+
 export const SpecsViewerModal: React.FC<SpecsViewerModalProps> = ({
   isOpen,
   onClose,
   initialCountry = 'AR',
   onSpecsUpdated,
 }) => {
-  const [selectedCountry, setSelectedCountry] = useState<CountryCode>(initialCountry);
+  const validInitialCountry = PDP_COUNTRIES.some((c) => c.code === initialCountry)
+    ? initialCountry
+    : 'AR';
+  const [selectedCountry, setSelectedCountry] = useState<CountryCode>(validInitialCountry);
   const [specsStore, setSpecsStore] = useState<CountrySpecsStore>(loadAllSpecs());
   const [editingSpec, setEditingSpec] = useState<RetailerSpec | null>(null);
   const [isNewRetailer, setIsNewRetailer] = useState(false);
@@ -41,8 +48,10 @@ export const SpecsViewerModal: React.FC<SpecsViewerModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setSpecsStore(loadAllSpecs());
-      if (initialCountry) {
+      if (initialCountry && PDP_COUNTRIES.some((c) => c.code === initialCountry)) {
         setSelectedCountry(initialCountry);
+      } else {
+        setSelectedCountry('AR');
       }
     }
   }, [isOpen, initialCountry]);
@@ -124,7 +133,7 @@ export const SpecsViewerModal: React.FC<SpecsViewerModalProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-100 uppercase tracking-tight">
-                Configuración de Specs
+                Configuración de Specs de PDPs
               </h2>
             </div>
           </div>
@@ -150,7 +159,7 @@ export const SpecsViewerModal: React.FC<SpecsViewerModalProps> = ({
 
         {/* Country Selector Tabs */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 px-6 py-3 bg-white/[0.01] border-b border-white/10">
-          {COUNTRIES.map((c) => {
+          {PDP_COUNTRIES.map((c) => {
             const count = (specsStore[c.code] || []).length;
             const isSelected = selectedCountry === c.code;
             return (

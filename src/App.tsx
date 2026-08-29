@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { COUNTRIES } from './data/retailerSpecs';
 import { CountryInfo, AnalysisReport, CountryCode, AdaptationReport } from './types';
-import { Header } from './components/Header';
 import { CountryModuleCard } from './components/CountryModuleCard';
 import { FolderDropZone } from './components/FolderDropZone';
 import { AdaptationsDropZone } from './components/AdaptationsDropZone';
@@ -138,26 +137,26 @@ export default function App() {
       <div className="fixed bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none z-0" />
       <div className="fixed top-[40%] left-[25%] w-[400px] h-[400px] bg-indigo-600/5 rounded-full blur-[100px] pointer-events-none z-0" />
 
-      {/* Top Navbar */}
-      <Header onOpenSpecs={() => {
-        setSpecsModalInitialCountry(selectedCountry?.code === 'ADAPTACIONES' ? 'AR' : selectedCountry?.code || 'AR');
-        setIsSpecsModalOpen(true);
-      }} />
-
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
         {!selectedCountry ? (
           /* Dashboard Home View */
           <div className="space-y-10">
             {/* Hero / Intro Section */}
-            <div className="text-center max-w-3xl mx-auto space-y-4">
-              {/* Main Typography Lockup */}
-              <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-slate-100 uppercase">
-                IA TEST <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-indigo-200 to-pink-300 drop-shadow-[0_0_25px_rgba(129,140,248,0.25)]">PRODU</span>
-              </h1>
+            <div className="text-center max-w-4xl mx-auto space-y-5 pt-2 sm:pt-4">
+              {/* Brand Typography Logotype - Ultra-Light (100) & Refined Balanced Kerning */}
+              <div className="flex flex-col items-center justify-center">
+                <h1
+                  className="text-5xl sm:text-7xl md:text-8xl lg:text-[5.75rem] font-[100] uppercase select-none transition-all duration-300 leading-none tracking-[0.04em]"
+                  style={{ fontFamily: "'Urbanist', sans-serif" }}
+                >
+                  <span className="text-white/95">IA TEST</span>{' '}
+                  <span className="text-indigo-400">PRODU</span>
+                </h1>
+              </div>
 
               {/* Minimal Editorial Subtitle */}
-              <p className="text-xs sm:text-sm text-slate-400 max-w-xl mx-auto font-medium leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-400 max-w-xl mx-auto font-normal leading-relaxed tracking-normal">
                 Herramienta de verificación de specs para PDPs (ATF y BTF), detección de imágenes duplicadas para subida de Opera y control de adaptaciones.
               </p>
             </div>
