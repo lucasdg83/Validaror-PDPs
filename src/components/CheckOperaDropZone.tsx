@@ -7,16 +7,11 @@ import {
   Image as ImageIcon,
   Trash2,
   Sparkles,
-  ShieldCheck,
-  FolderTree,
-  AlertTriangle,
   FolderOpen,
   Database,
-  Layers,
 } from 'lucide-react';
 import {
   scanAndAnalyzeOperaFolder,
-  generateDemoOperaFiles,
   ALLOWED_IMAGE_EXTENSIONS,
 } from '../utils/operaChecker';
 import { CheckOperaReportModal } from './CheckOperaReportModal';
@@ -27,7 +22,6 @@ interface CheckOperaDropZoneProps {
 }
 
 export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
-  country,
   onBack,
 }) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -116,23 +110,6 @@ export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
     }
   };
 
-  // Load sample demo folder (includes subfolders, 100% redundant folder, and non-image omitted files)
-  const handleLoadDemo = async () => {
-    setIsAnalyzing(true);
-    setAnalysisStatus('Generando estructura demo con subcarpetas, carpetas redundantes y formatos varios...');
-    try {
-      const demoFiles = await generateDemoOperaFiles();
-      setRootFolderName('Opera_DAM_Export_Demo');
-      setSelectedFiles(demoFiles);
-      setValidationAlert(null);
-    } catch (e) {
-      console.error('Error generating demo:', e);
-    } finally {
-      setIsAnalyzing(false);
-      setAnalysisStatus('');
-    }
-  };
-
   const handleClear = () => {
     setSelectedFiles([]);
     setRootFolderName('');
@@ -159,60 +136,13 @@ export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
             <Database className="w-5 h-5 text-pink-400 drop-shadow-[0_0_8px_rgba(244,114,182,0.4)]" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg sm:text-xl font-bold text-slate-100 uppercase tracking-wide">
-                Check Opera
-              </h2>
-              <span className="px-2 py-0.5 rounded-full bg-pink-500/15 border border-pink-500/30 text-pink-300 text-[10px] font-mono font-bold tracking-wider uppercase">
-                DAM Repository
-              </span>
-            </div>
-            <p className="text-xs text-pink-300/80 font-medium">
-              Auditoría Inteligente de Duplicados en Repositorios & Subcarpetas de Opera DAM
-            </p>
+            <h2 className="text-lg sm:text-xl font-bold text-slate-100 uppercase tracking-wide">
+              Check Opera
+            </h2>
           </div>
         </div>
 
-        <button
-          onClick={handleLoadDemo}
-          disabled={isAnalyzing}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 border border-pink-500/20 text-xs font-semibold transition-colors"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Cargar Carpeta Demo con Subcarpetas</span>
-        </button>
-      </div>
-
-      {/* Strict Rules & Parameters Callout Card */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-pink-950/40 via-purple-950/20 to-slate-900/40 border border-pink-500/30 backdrop-blur-xl space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-pink-400 font-bold text-xs uppercase tracking-wider">
-            <ShieldCheck className="w-4 h-4 text-pink-400" />
-            <span>Reglas de Análisis en Check Opera</span>
-          </div>
-          <span className="px-2.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 text-[11px] font-mono font-bold border border-pink-500/30">
-            Formatos: JPG • JPEG • PNG • WEBP
-          </span>
-        </div>
-
-        <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
-          La IA examina todos los archivos del directorio y <strong className="text-pink-300">recorre recursivamente todas sus subcarpetas</strong> para identificar aquellas imágenes que estén <strong className="text-pink-300">repetidas en contenido visual + mismo tamaño exacto</strong>.
-        </p>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-[11px] text-slate-300 font-mono">
-          <div className="p-2 rounded-lg bg-black/30 border border-white/5 flex items-center gap-2">
-            <FolderTree className="w-3.5 h-3.5 text-pink-400 flex-shrink-0" />
-            <span>Soporte de subcarpetas multinivel</span>
-          </div>
-          <div className="p-2 rounded-lg bg-black/30 border border-white/5 flex items-center gap-2">
-            <span className="text-emerald-400 font-bold">✓</span>
-            <span>Alerta de carpetas 100% duplicadas</span>
-          </div>
-          <div className="p-2 rounded-lg bg-black/30 border border-white/5 flex items-center gap-2">
-            <span className="text-amber-400 font-bold">ℹ</span>
-            <span>Reporte de formatos omitidos</span>
-          </div>
-        </div>
+        <div />
       </div>
 
       {/* Validation Alert */}
@@ -230,7 +160,7 @@ export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-slate-200 font-bold text-sm uppercase tracking-wide">
             <FolderUp className="w-4 h-4 text-pink-400" />
-            <span>1. Seleccionar Carpeta del Dispositivo</span>
+            <span>Seleccionar una Carpeta del Dispositivo para analizar duplicados</span>
           </div>
           {selectedFiles.length > 0 && (
             <button
@@ -365,13 +295,15 @@ export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
 
         {/* Action Button */}
         <div className="pt-4 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <Sparkles className="w-4 h-4 text-pink-400" />
-            <span>
-              {selectedFiles.length === 0
-                ? 'Sube una carpeta para habilitar el análisis de duplicados con IA.'
-                : `${validImageFiles.length} imágenes listas para chequear repetición en contenido y tamaño.`}
-            </span>
+          <div>
+            {selectedFiles.length > 0 && (
+              <div className="flex items-center gap-2 text-xs text-slate-400">
+                <Sparkles className="w-4 h-4 text-pink-400" />
+                <span>
+                  {validImageFiles.length} imágenes listas para chequear repetición en contenido y tamaño.
+                </span>
+              </div>
+            )}
           </div>
 
           <button
@@ -435,3 +367,4 @@ export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
     </div>
   );
 };
+
