@@ -250,6 +250,8 @@ export interface OperaImageFile {
   previewUrl?: string;
   thumbnailBase64?: string;
   hash?: string;
+  sha256?: string;
+  cleanName?: string;
   fileObj?: File;
 }
 
@@ -275,6 +277,7 @@ export interface OperaEntirelyDuplicatedFolder {
   recommendation: string; // "La carpeta '...' completa está duplicada"
   explanation: string;
   files: OperaImageFile[];
+  duplicatedPercentage?: number;
   clusterId?: number;
   clusterName?: string;
   matchedFolders?: string[];

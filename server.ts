@@ -653,7 +653,7 @@ Incluye en "imageIds" los IDs exactos de las imágenes que forman cada cluster d
 
         try {
           const response = await ai.models.generateContent({
-            model: "gemini-3.7-flash",
+            model: "gemini-2.5-flash",
             contents: parts,
             config: {
               responseMimeType: "application/json",

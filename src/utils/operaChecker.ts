@@ -9,6 +9,75 @@ import {
 
 export const ALLOWED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
 
+// Helper to compute fast SHA-256 / sample hash for exact byte matching
+async function computeFastFileHash(file: File): Promise<string> {
+  try {
+    const size = file.size;
+    if (size <= 4 * 1024 * 1024) {
+      const buffer = await file.arrayBuffer();
+      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+    } else {
+      const s1 = file.slice(0, 65536);
+      const mid = Math.floor(size / 2);
+      const s2 = file.slice(mid, mid + 65536);
+      const s3 = file.slice(size - 65536, size);
+      const combined = new Blob([s1, s2, s3]);
+      const buffer = await combined.arrayBuffer();
+      const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return `${size}-${hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')}`;
+    }
+  } catch {
+    return `${file.size}-${file.name}`;
+  }
+}
+
+// Helper to normalize base filename (removes copies, suffixes, punctuation)
+function cleanBaseFileName(name: string): string {
+  return name
+    .replace(/\.[^/.]+$/, '') // remove extension
+    .toLowerCase()
+    .replace(/[\s_-]*(copia|copy|\(\d+\))[\s_-]*/gi, '')
+    .replace(/[^a-z0-9]/gi, '');
+}
+
+// Disjoint-Set / Union-Find for robust transitive duplicate clustering
+class DisjointSet {
+  parent = new Map<string, string>();
+  rank = new Map<string, number>();
+
+  find(id: string): string {
+    if (!this.parent.has(id)) {
+      this.parent.set(id, id);
+      this.rank.set(id, 0);
+      return id;
+    }
+    const p = this.parent.get(id)!;
+    if (p === id) return id;
+    const root = this.find(p);
+    this.parent.set(id, root);
+    return root;
+  }
+
+  union(idA: string, idB: string): void {
+    const rootA = this.find(idA);
+    const rootB = this.find(idB);
+    if (rootA === rootB) return;
+    const rankA = this.rank.get(rootA) || 0;
+    const rankB = this.rank.get(rootB) || 0;
+    if (rankA < rankB) {
+      this.parent.set(rootA, rootB);
+    } else if (rankA > rankB) {
+      this.parent.set(rootB, rootA);
+    } else {
+      this.parent.set(rootB, rootA);
+      this.rank.set(rootA, rankA + 1);
+    }
+  }
+}
+
 // Helper to compute perceptual difference hash (dHash) on canvas (17x16 -> 16x16 = 256 bits)
 async function computePerceptualHashAndThumbnail(
   file: File
@@ -19,7 +88,12 @@ async function computePerceptualHashAndThumbnail(
   thumbnailBase64: string;
   hash: string;
   previewUrl: string;
+  sha256: string;
+  cleanName: string;
 }> {
+  const sha256 = await computeFastFileHash(file);
+  const cleanName = cleanBaseFileName(file.name);
+
   return new Promise((resolve, reject) => {
     const previewUrl = URL.createObjectURL(file);
     const img = new Image();
@@ -105,6 +179,8 @@ async function computePerceptualHashAndThumbnail(
         thumbnailBase64,
         hash,
         previewUrl,
+        sha256,
+        cleanName,
       });
     };
 
@@ -126,14 +202,25 @@ function getHammingDistance(h1: string, h2: string): number {
   return dist;
 }
 
+// Normalize folder path string (handles Windows backslashes, multiple slashes, trimming)
+export function normalizeFolderPath(p: string): string {
+  if (!p) return '(Raíz)';
+  const cleaned = p.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/+|\/+$/g, '').trim();
+  return cleaned || '(Raíz)';
+}
+
 // Extract subfolder path from webkitRelativePath
 export function extractSubfolderPath(relativePath: string): { rootFolder: string; subfolderPath: string; folderName: string } {
-  if (!relativePath || !relativePath.includes('/')) {
+  if (!relativePath) {
     return { rootFolder: 'Carpeta', subfolderPath: '(Raíz)', folderName: 'Raíz' };
   }
-  const parts = relativePath.split('/');
-  const rootFolder = parts[0];
-  if (parts.length === 2) {
+  const normalized = relativePath.replace(/\\/g, '/').replace(/\/+/g, '/').trim();
+  if (!normalized.includes('/')) {
+    return { rootFolder: 'Carpeta', subfolderPath: '(Raíz)', folderName: 'Raíz' };
+  }
+  const parts = normalized.split('/').filter(Boolean);
+  const rootFolder = parts[0] || 'Carpeta';
+  if (parts.length <= 2) {
     return { rootFolder, subfolderPath: '(Raíz)', folderName: rootFolder };
   }
   // Subfolder path between root and filename
@@ -213,6 +300,8 @@ export async function scanAndAnalyzeOperaFolder(
         previewUrl: meta.previewUrl,
         thumbnailBase64: meta.thumbnailBase64,
         hash: meta.hash,
+        sha256: meta.sha256,
+        cleanName: meta.cleanName,
         fileObj: file,
       });
     } catch (err) {
@@ -235,126 +324,162 @@ export async function scanAndAnalyzeOperaFolder(
 
   // 1. Send matching dimension candidate groups to backend Gemini API
   let aiDuplicateGroups: OperaDuplicateGroup[] = [];
-  let usedBackendAI = false;
 
   try {
-    const payload = {
-      rootFolderName,
-      images: parsedImages.map((img) => ({
-        id: img.id,
-        name: img.name,
-        relativePath: img.relativePath,
-        subfolderPath: img.subfolderPath,
-        sizeBytes: img.sizeBytes,
-        width: img.width,
-        height: img.height,
-        dimensionsStr: img.dimensionsStr,
-        aspectRatio: img.aspectRatio,
-        thumbnailBase64: img.thumbnailBase64,
-      })),
-    };
+    const candidateGroups = Object.entries(dimensionGroups).filter(([_, list]) => list.length >= 2);
+    if (candidateGroups.length > 0) {
+      const payload = {
+        rootFolderName,
+        images: parsedImages.map((img) => ({
+          id: img.id,
+          name: img.name,
+          relativePath: img.relativePath,
+          subfolderPath: img.subfolderPath,
+          sizeBytes: img.sizeBytes,
+          width: img.width,
+          height: img.height,
+          dimensionsStr: img.dimensionsStr,
+          aspectRatio: img.aspectRatio,
+          thumbnailBase64: img.thumbnailBase64,
+        })),
+      };
 
-    const res = await fetch('/api/opera/check-duplicates', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
+      const res = await fetch('/api/opera/check-duplicates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success && Array.isArray(data.duplicateGroups)) {
-        aiDuplicateGroups = data.duplicateGroups.map((g: any) => ({
-          ...g,
-          files: g.files.map((gf: any) => {
-            const found = parsedImages.find((p) => p.id === gf.id || p.relativePath === gf.relativePath || p.name === gf.name);
-            return found || gf;
-          }),
-        }));
-        usedBackendAI = true;
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.duplicateGroups)) {
+          aiDuplicateGroups = data.duplicateGroups.map((g: any) => ({
+            ...g,
+            files: g.files.map((gf: any) => {
+              const found = parsedImages.find((p) => p.id === gf.id || p.relativePath === gf.relativePath || p.name === gf.name);
+              return found || gf;
+            }),
+          }));
+        }
       }
     }
   } catch (backendErr) {
-    console.warn('Backend AI check skipped, fallback to client perceptual matcher:', backendErr);
+    console.warn('Backend AI check skipped, continuing with local multi-tier analyzer:', backendErr);
   }
 
-  // 2. Process duplicate groups and ensure strict 1-to-1 file assignment (no ID reused across groups)
-  const rawGroups: OperaDuplicateGroup[] = [];
+  // 2. High-Accuracy Multi-Tier Duplicate Clustering Engine
+  const uf = new DisjointSet();
 
-  if (usedBackendAI && aiDuplicateGroups.length > 0) {
-    rawGroups.push(...aiDuplicateGroups);
-  } else {
-    // Cluster identical dimension groups using perceptual dHash + size comparison
-    Object.entries(dimensionGroups).forEach(([dim, groupList]) => {
-      if (groupList.length < 2) return;
+  // Tier 1: Exact SHA-256 byte match (across any images)
+  const shaMap = new Map<string, OperaImageFile[]>();
+  parsedImages.forEach((img) => {
+    if (img.sha256) {
+      if (!shaMap.has(img.sha256)) shaMap.set(img.sha256, []);
+      shaMap.get(img.sha256)!.push(img);
+    }
+  });
+  shaMap.forEach((imgs) => {
+    if (imgs.length >= 2) {
+      for (let i = 1; i < imgs.length; i++) {
+        uf.union(imgs[0].id, imgs[i].id);
+      }
+    }
+  });
 
-      const visited = new Set<string>();
+  // Tier 2: Exact dimensions matching (size, dHash distance <= 18, clean filename, close size)
+  Object.entries(dimensionGroups).forEach(([_, groupList]) => {
+    if (groupList.length < 2) return;
 
-      for (let i = 0; i < groupList.length; i++) {
-        const base = groupList[i];
-        if (visited.has(base.id)) continue;
+    for (let i = 0; i < groupList.length; i++) {
+      const a = groupList[i];
+      for (let j = i + 1; j < groupList.length; j++) {
+        const b = groupList[j];
 
-        const cluster: OperaImageFile[] = [base];
-        visited.add(base.id);
-
-        for (let j = i + 1; j < groupList.length; j++) {
-          const target = groupList[j];
-          if (visited.has(target.id)) continue;
-
-          // dHash distance: 256 bits total.
-          const dist = getHammingDistance(base.hash || '', target.hash || '');
-          const isByteMatch = base.sizeBytes === target.sizeBytes;
-
-          if (dist <= 8 || isByteMatch) {
-            cluster.push(target);
-            visited.add(target.id);
-          }
+        // Exact byte size match
+        if (a.sizeBytes === b.sizeBytes && a.sizeBytes > 0) {
+          uf.union(a.id, b.id);
+          continue;
         }
 
-        if (cluster.length >= 2) {
-          rawGroups.push({
-            groupId: `dup-${dim}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-            dimensionsStr: dim,
-            width: base.width,
-            height: base.height,
-            aspectRatio: base.aspectRatio,
-            visualSummary: `Asset con contenido visual idéntico (${cluster[0].name.replace(/\.[^/.]+$/, '')})`,
-            files: cluster,
-            totalDuplicateCopies: cluster.length - 1,
-            wastedBytes: 0,
-            confidence: 98,
-            aiExplanation: `Las ${cluster.length} imágenes comparten exactamente la misma resolución (${dim} px) y el mismo contenido visual verificado.`,
-          });
+        // dHash distance on 256 bits
+        const dist = getHammingDistance(a.hash || '', b.hash || '');
+        // Distance <= 18 is >= 93% visual similarity
+        if (dist <= 18) {
+          uf.union(a.id, b.id);
+          continue;
+        }
+
+        // Same clean name + distance <= 30
+        const cleanA = a.cleanName || cleanBaseFileName(a.name);
+        const cleanB = b.cleanName || cleanBaseFileName(b.name);
+        if (cleanA && cleanB && cleanA === cleanB && dist <= 30) {
+          uf.union(a.id, b.id);
+          continue;
+        }
+
+        // Very close file size (< 2% diff) + distance <= 24
+        const sizeDiff = Math.abs(a.sizeBytes - b.sizeBytes) / Math.max(a.sizeBytes, b.sizeBytes, 1);
+        if (sizeDiff < 0.02 && dist <= 24) {
+          uf.union(a.id, b.id);
+          continue;
+        }
+      }
+    }
+  });
+
+  // Tier 3: Incorporate Gemini AI duplicate clusters if available
+  if (aiDuplicateGroups.length > 0) {
+    aiDuplicateGroups.forEach((g) => {
+      if (g.files.length >= 2) {
+        for (let i = 1; i < g.files.length; i++) {
+          uf.union(g.files[0].id, g.files[i].id);
         }
       }
     });
   }
 
-  // Ensure mutually exclusive grouping: each image file belongs to at most one duplicate group
-  const assignedImageIds = new Set<string>();
+  // Build final duplicate groups from connected components
+  const clusters = new Map<string, OperaImageFile[]>();
+  parsedImages.forEach((img) => {
+    const root = uf.find(img.id);
+    if (!clusters.has(root)) clusters.set(root, []);
+    clusters.get(root)!.push(img);
+  });
+
   const finalDuplicateGroups: OperaDuplicateGroup[] = [];
   const duplicatedFileIdMap = new Map<string, OperaDuplicateGroup>();
+  const assignedImageIds = new Set<string>();
 
-  for (const g of rawGroups) {
-    const unassignedFiles = g.files.filter((f) => !assignedImageIds.has(f.id));
-    if (unassignedFiles.length >= 2) {
-      unassignedFiles.forEach((f) => {
-        assignedImageIds.add(f.id);
-      });
+  clusters.forEach((files, rootId) => {
+    if (files.length >= 2) {
+      const base = files[0];
+      const totalBytes = files.reduce((sum, f) => sum + f.sizeBytes, 0);
+      const wastedBytes = totalBytes - base.sizeBytes;
       const validGroup: OperaDuplicateGroup = {
-        ...g,
-        files: unassignedFiles,
-        totalDuplicateCopies: unassignedFiles.length - 1,
-        wastedBytes: 0,
+        groupId: `dup-${base.dimensionsStr}-${rootId}`,
+        dimensionsStr: base.dimensionsStr,
+        width: base.width,
+        height: base.height,
+        aspectRatio: base.aspectRatio,
+        visualSummary: `Asset con contenido visual idéntico (${files[0].name.replace(/\.[^/.]+$/, '')})`,
+        files,
+        totalDuplicateCopies: files.length - 1,
+        wastedBytes,
+        confidence: 99,
+        aiExplanation: `Las ${files.length} imágenes comparten exactamente la misma resolución (${base.dimensionsStr} px) y el mismo contenido visual verificado en ${files.length} ubicaciones.`,
       };
       finalDuplicateGroups.push(validGroup);
-      unassignedFiles.forEach((f) => duplicatedFileIdMap.set(f.id, validGroup));
+      files.forEach((f) => {
+        assignedImageIds.add(f.id);
+        duplicatedFileIdMap.set(f.id, validGroup);
+      });
     }
-  }
+  });
 
-  // 3. Identify Redundant Folders (100% duplicate content) with full subfolder path
+  // 3. Identify Redundant Folders (100% duplicate content or high duplication)
   const folderToImagesMap: Record<string, OperaImageFile[]> = {};
   parsedImages.forEach((img) => {
-    const folderKey = img.subfolderPath;
+    const folderKey = normalizeFolderPath(img.subfolderPath);
     if (!folderToImagesMap[folderKey]) {
       folderToImagesMap[folderKey] = [];
     }
@@ -363,10 +488,9 @@ export async function scanAndAnalyzeOperaFolder(
 
   const entirelyDuplicatedFolders: OperaEntirelyDuplicatedFolder[] = [];
 
-  // Check each subfolder: if 100% of images in this folder have copies in another folder
-  Object.entries(folderToImagesMap).forEach(([subPath, folderImages]) => {
-    // Only evaluate subfolders (skip if strictly root single file or empty)
-    if (subPath === '(Raíz)' && Object.keys(folderToImagesMap).length === 1) return;
+  // Check each subfolder: if 100% (or >= 80%) of images in this folder have copies elsewhere
+  Object.entries(folderToImagesMap).forEach(([folderKey, folderImages]) => {
+    if (folderKey === '(Raíz)' && Object.keys(folderToImagesMap).length === 1) return;
     if (folderImages.length === 0) return;
 
     let redundantCount = 0;
@@ -374,27 +498,40 @@ export async function scanAndAnalyzeOperaFolder(
     folderImages.forEach((img) => {
       const dupGroup = duplicatedFileIdMap.get(img.id);
       if (dupGroup) {
-        // Check if there is another copy of this image outside of this subfolder or sibling
-        const hasExternalCopy = dupGroup.files.some((other) => other.id !== img.id && other.subfolderPath !== subPath);
-        const hasSiblingCopy = dupGroup.files.some((other) => other.id !== img.id);
-
-        if (hasExternalCopy || hasSiblingCopy) {
+        // Content exists outside this folder if dupGroup contains any image whose folder is different
+        const hasExternalCopy = dupGroup.files.some(
+          (other) => normalizeFolderPath(other.subfolderPath) !== folderKey
+        );
+        if (hasExternalCopy) {
           redundantCount++;
         }
       }
     });
 
-    // If 100% of the images in this folder are duplicate copies of images found elsewhere:
-    if (redundantCount === folderImages.length && redundantCount > 0) {
-      const fullSubfolderDisplay = subPath === '(Raíz)' ? `/${rootFolderName}/` : `/${subPath}/`;
+    const is100Percent = redundantCount === folderImages.length && redundantCount > 0;
+    const isHighDuplication = !is100Percent && folderImages.length >= 2 && redundantCount >= Math.ceil(folderImages.length * 0.8);
+
+    if (is100Percent || isHighDuplication) {
+      const fullSubfolderDisplay = folderKey === '(Raíz)' ? `/${rootFolderName}/` : `/${folderKey}/`;
+      const pct = Math.round((redundantCount / folderImages.length) * 100);
+
+      const recommendation = is100Percent
+        ? `La carpeta "${fullSubfolderDisplay}" completa está duplicada`
+        : `La carpeta "${fullSubfolderDisplay}" está duplicada al ${pct}% (${redundantCount} de ${folderImages.length} archivos)`;
+
+      const explanation = is100Percent
+        ? `El 100% de las imágenes (${folderImages.length} archivos) contenidas en "${fullSubfolderDisplay}" son copias idénticas de archivos ya existentes en otras ubicaciones del proyecto.`
+        : `El ${pct}% de las imágenes (${redundantCount} de ${folderImages.length} archivos) contenidas en "${fullSubfolderDisplay}" son copias idénticas ya existentes en otras ubicaciones.`;
+
       entirelyDuplicatedFolders.push({
-        folderPath: subPath,
+        folderPath: folderKey,
         folderDisplayName: fullSubfolderDisplay,
         totalImages: folderImages.length,
         wastedBytes: 0,
-        recommendation: `La carpeta "${fullSubfolderDisplay}" completa está duplicada`,
-        explanation: `El 100% de las imágenes (${folderImages.length} archivos) contenidas en "${fullSubfolderDisplay}" son copias idénticas de archivos ya existentes en otras ubicaciones del proyecto.`,
+        recommendation,
+        explanation,
         files: folderImages,
+        duplicatedPercentage: pct,
       });
     }
   });
@@ -471,8 +608,10 @@ export async function scanAndAnalyzeOperaFolder(
               const group = duplicatedFileIdMap.get(file.id);
               if (group) {
                 group.files.forEach((otherFile) => {
-                  if (otherFile.subfolderPath !== f.folderPath) {
-                    const disp = otherFile.subfolderPath === '(Raíz)' ? `/${rootFolderName}/` : `/${otherFile.subfolderPath}/`;
+                  const otherNorm = normalizeFolderPath(otherFile.subfolderPath);
+                  const fNorm = normalizeFolderPath(f.folderPath);
+                  if (otherNorm !== fNorm) {
+                    const disp = otherNorm === '(Raíz)' ? `/${rootFolderName}/` : `/${otherNorm}/`;
                     externalFolders.add(disp);
                   }
                 });

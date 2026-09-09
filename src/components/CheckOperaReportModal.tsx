@@ -296,11 +296,13 @@ export const CheckOperaReportModal: React.FC<CheckOperaReportModalProps> = ({
                         </div>
                       </div>
 
-                      <div className="text-right">
+                      <div className="text-right flex-shrink-0">
                         <span
                           className={`text-xs font-mono font-bold px-3 py-1.5 rounded-xl border inline-block ${theme.badge}`}
                         >
-                          {folder.totalImages} archivos 100% repetidos
+                          {folder.duplicatedPercentage && folder.duplicatedPercentage < 100
+                            ? `${folder.duplicatedPercentage}% repetido (${folder.totalImages} archivos)`
+                            : `${folder.totalImages} archivos 100% repetidos`}
                         </span>
                       </div>
                     </div>
