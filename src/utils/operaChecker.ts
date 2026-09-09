@@ -399,6 +399,94 @@ export async function scanAndAnalyzeOperaFolder(
     }
   });
 
+  // 3.1. Group entirely duplicated folders into clusters by shared duplicate files
+  if (entirelyDuplicatedFolders.length > 0) {
+    // Map each folder to the set of duplicate group IDs its images belong to
+    const folderGroupSets = entirelyDuplicatedFolders.map((folder) => {
+      const gids = new Set<string>();
+      folder.files.forEach((img) => {
+        const group = duplicatedFileIdMap.get(img.id);
+        if (group) {
+          gids.add(group.groupId);
+        }
+      });
+      return gids;
+    });
+
+    const n = entirelyDuplicatedFolders.length;
+    // Adjacency graph: an edge exists between two folders if they share at least one duplicate group
+    const adj: number[][] = Array.from({ length: n }, () => []);
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        let shares = false;
+        for (const gid of folderGroupSets[i]) {
+          if (folderGroupSets[j].has(gid)) {
+            shares = true;
+            break;
+          }
+        }
+        if (shares) {
+          adj[i].push(j);
+          adj[j].push(i);
+        }
+      }
+    }
+
+    const visited = new Set<number>();
+    let currentClusterId = 0;
+
+    for (let i = 0; i < n; i++) {
+      if (!visited.has(i)) {
+        const component: number[] = [];
+        const queue: number[] = [i];
+        visited.add(i);
+
+        while (queue.length > 0) {
+          const curr = queue.shift()!;
+          component.push(curr);
+          for (const neighbor of adj[curr]) {
+            if (!visited.has(neighbor)) {
+              visited.add(neighbor);
+              queue.push(neighbor);
+            }
+          }
+        }
+
+        component.forEach((idx) => {
+          const f = entirelyDuplicatedFolders[idx];
+          f.clusterId = currentClusterId;
+          f.clusterName = `Grupo ${currentClusterId + 1}`;
+
+          // Matched folders from within entirelyDuplicatedFolders
+          const internalMatches = component
+            .filter((cIdx) => cIdx !== idx)
+            .map((cIdx) => entirelyDuplicatedFolders[cIdx].folderDisplayName);
+
+          if (internalMatches.length > 0) {
+            f.matchedFolders = internalMatches;
+          } else {
+            // If no other entirely duplicated folder shares this cluster, look for other project folders containing duplicate copies
+            const externalFolders = new Set<string>();
+            f.files.forEach((file) => {
+              const group = duplicatedFileIdMap.get(file.id);
+              if (group) {
+                group.files.forEach((otherFile) => {
+                  if (otherFile.subfolderPath !== f.folderPath) {
+                    const disp = otherFile.subfolderPath === '(Raíz)' ? `/${rootFolderName}/` : `/${otherFile.subfolderPath}/`;
+                    externalFolders.add(disp);
+                  }
+                });
+              }
+            });
+            f.matchedFolders = Array.from(externalFolders);
+          }
+        });
+
+        currentClusterId++;
+      }
+    }
+  }
+
   // 4. Construct Unique Images catalog (assets with no duplicates + 1 primary copy of each duplicate group)
   const uniqueImages: OperaImageFile[] = [];
 
@@ -480,11 +568,15 @@ export function generateOperaTXTReport(report: OperaAnalysisReport): string {
 
   // Highlight Entirely Duplicated Folders (if any)
   if (report.entirelyDuplicatedFolders.length > 0) {
-    lines.push('🚨 ALERTA CRÍTICA: CARPETAS 100% DUPLICADAS DETECTADAS');
+    lines.push('🚨 ALERTA: CARPETAS 100% DUPLICADAS DETECTADAS');
     lines.push('----------------------------------------------------------------------');
     report.entirelyDuplicatedFolders.forEach((folder, idx) => {
-      lines.push(`[CARPETA DUPLICADA #${idx + 1}]`);
+      const clusterTag = folder.clusterName ? `[${folder.clusterName}] ` : '';
+      lines.push(`[CARPETA DUPLICADA #${idx + 1} ${clusterTag}]`);
       lines.push(`👉 ${folder.recommendation}`);
+      if (folder.matchedFolders && folder.matchedFolders.length > 0) {
+        lines.push(`   • Coincide con carpeta(s): ${folder.matchedFolders.join(', ')}`);
+      }
       lines.push(`   • Ruta Subcarpeta: ${folder.folderDisplayName}`);
       lines.push(`   • Total Archivos:   ${folder.totalImages} imágenes (100% duplicadas en otras ubicaciones)`);
       lines.push(`   • Diagnóstico:     ${folder.explanation}`);
@@ -616,26 +708,42 @@ export function generateOperaPDFReport(report: OperaAnalysisReport) {
 
   // Notice: Entirely Duplicated Folders recommendation
   if (report.entirelyDuplicatedFolders.length > 0) {
-    report.entirelyDuplicatedFolders.forEach((folder) => {
-      if (y > 240) {
+    const clusterPalette = [
+      { fill: [254, 243, 199], stroke: [245, 158, 11], text: [180, 83, 9] }, // Amber
+      { fill: [207, 250, 254], stroke: [6, 182, 212], text: [14, 116, 144] }, // Cyan
+      { fill: [243, 232, 255], stroke: [168, 85, 247], text: [126, 34, 206] }, // Purple
+      { fill: [209, 250, 229], stroke: [16, 185, 129], text: [4, 120, 87] }, // Emerald
+      { fill: [255, 228, 230], stroke: [244, 63, 94], text: [190, 18, 60] }, // Rose
+      { fill: [224, 231, 255], stroke: [99, 102, 241], text: [67, 56, 202] }, // Indigo
+    ];
+
+    report.entirelyDuplicatedFolders.forEach((folder, idx) => {
+      if (y > 238) {
         doc.addPage();
         y = 20;
       }
-      doc.setFillColor(254, 242, 242);
-      doc.setDrawColor(244, 63, 94);
-      doc.roundedRect(14, y, pageWidth - 28, 18, 2, 2, 'FD');
+      const cIndex = (folder.clusterId ?? idx) % clusterPalette.length;
+      const c = clusterPalette[cIndex];
 
-      doc.setFontSize(9);
+      doc.setFillColor(c.fill[0], c.fill[1], c.fill[2]);
+      doc.setDrawColor(c.stroke[0], c.stroke[1], c.stroke[2]);
+      doc.roundedRect(14, y, pageWidth - 28, 20, 2, 2, 'FD');
+
+      doc.setFontSize(8.5);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(225, 29, 72);
-      doc.text(`${folder.recommendation}`, 18, y + 6);
+      doc.setTextColor(c.text[0], c.text[1], c.text[2]);
+      const prefix = folder.clusterName ? `[${folder.clusterName}] ` : '';
+      doc.text(`${prefix}${folder.recommendation}`, 18, y + 6);
 
-      doc.setFontSize(7.5);
+      doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(71, 85, 105);
-      doc.text(`El 100% de su contenido (${folder.totalImages} imágenes) está duplicado en otras subcarpetas del proyecto.`, 18, y + 12);
+      const matchText = folder.matchedFolders && folder.matchedFolders.length > 0
+        ? `Coincide con: ${folder.matchedFolders.join(', ')} • `
+        : '';
+      doc.text(`${matchText}100% de imágenes (${folder.totalImages}) duplicadas en el proyecto.`, 18, y + 13);
 
-      y += 22;
+      y += 24;
     });
   }
 

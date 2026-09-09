@@ -30,6 +30,94 @@ interface CheckOperaReportModalProps {
   onClose: () => void;
 }
 
+interface ClusterColorTheme {
+  id: string;
+  name: string;
+  bgGradient: string;
+  border: string;
+  iconBg: string;
+  titleColor: string;
+  badge: string;
+  tag: string;
+  dot: string;
+  highlightText: string;
+}
+
+const CLUSTER_COLOR_THEMES: ClusterColorTheme[] = [
+  {
+    id: 'amber',
+    name: 'Ámbar',
+    bgGradient: 'bg-gradient-to-r from-amber-950/60 via-amber-900/30 to-slate-900/90',
+    border: 'border-amber-500/60',
+    iconBg: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+    titleColor: 'text-amber-200',
+    badge: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    tag: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+    dot: 'bg-amber-400',
+    highlightText: 'text-amber-300',
+  },
+  {
+    id: 'cyan',
+    name: 'Cian',
+    bgGradient: 'bg-gradient-to-r from-cyan-950/60 via-cyan-900/30 to-slate-900/90',
+    border: 'border-cyan-500/60',
+    iconBg: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+    titleColor: 'text-cyan-200',
+    badge: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+    tag: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+    dot: 'bg-cyan-400',
+    highlightText: 'text-cyan-300',
+  },
+  {
+    id: 'purple',
+    name: 'Violeta',
+    bgGradient: 'bg-gradient-to-r from-purple-950/60 via-purple-900/30 to-slate-900/90',
+    border: 'border-purple-500/60',
+    iconBg: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+    titleColor: 'text-purple-200',
+    badge: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+    tag: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+    dot: 'bg-purple-400',
+    highlightText: 'text-purple-300',
+  },
+  {
+    id: 'emerald',
+    name: 'Esmeralda',
+    bgGradient: 'bg-gradient-to-r from-emerald-950/60 via-emerald-900/30 to-slate-900/90',
+    border: 'border-emerald-500/60',
+    iconBg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+    titleColor: 'text-emerald-200',
+    badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+    tag: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+    dot: 'bg-emerald-400',
+    highlightText: 'text-emerald-300',
+  },
+  {
+    id: 'rose',
+    name: 'Rosa',
+    bgGradient: 'bg-gradient-to-r from-rose-950/60 via-rose-900/30 to-slate-900/90',
+    border: 'border-rose-500/60',
+    iconBg: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
+    titleColor: 'text-rose-200',
+    badge: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+    tag: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
+    dot: 'bg-rose-400',
+    highlightText: 'text-rose-300',
+  },
+  {
+    id: 'blue',
+    name: 'Cobalto',
+    bgGradient: 'bg-gradient-to-r from-blue-950/60 via-blue-900/30 to-slate-900/90',
+    border: 'border-blue-500/60',
+    iconBg: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
+    titleColor: 'text-blue-200',
+    badge: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    tag: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
+    dot: 'bg-blue-400',
+    highlightText: 'text-blue-300',
+  },
+];
+
 export const CheckOperaReportModal: React.FC<CheckOperaReportModalProps> = ({
   report,
   onClose,
@@ -164,34 +252,61 @@ export const CheckOperaReportModal: React.FC<CheckOperaReportModalProps> = ({
           {/* CRITICAL ALERT: Entirely Duplicated Folders Banner */}
           {hasDuplicatedFolders && (
             <div className="space-y-3">
-              {report.entirelyDuplicatedFolders.map((folder, idx) => (
-                <div
-                  key={idx}
-                  className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-rose-950/60 via-rose-900/40 to-slate-900/80 border-2 border-rose-500/60 shadow-xl"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2.5 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/40 flex-shrink-0 mt-0.5">
-                        <FolderX className="w-6 h-6" />
-                      </div>
-                      <div className="space-y-1">
-                        <h4 className="text-base sm:text-lg font-black text-rose-200">
-                          {folder.recommendation}
-                        </h4>
-                        <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
-                          {folder.explanation}
-                        </p>
-                      </div>
-                    </div>
+              {report.entirelyDuplicatedFolders.map((folder, idx) => {
+                const themeIndex = (folder.clusterId ?? idx) % CLUSTER_COLOR_THEMES.length;
+                const theme = CLUSTER_COLOR_THEMES[themeIndex];
 
-                    <div className="text-right">
-                      <span className="text-xs font-mono font-bold text-rose-300 px-3 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/30 inline-block">
-                        {folder.totalImages} archivos 100% repetidos
-                      </span>
+                return (
+                  <div
+                    key={idx}
+                    className={`p-4 sm:p-5 rounded-2xl ${theme.bgGradient} border-2 ${theme.border} shadow-xl transition-all`}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2.5 rounded-xl ${theme.iconBg} border flex-shrink-0 mt-0.5`}>
+                          <FolderX className="w-6 h-6" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className={`text-base sm:text-lg font-black ${theme.titleColor}`}>
+                              {folder.recommendation}
+                            </h4>
+                            {folder.clusterName && (
+                              <span
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold border ${theme.tag}`}
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full ${theme.dot} animate-pulse`} />
+                                {folder.clusterName}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
+                            {folder.explanation}
+                          </p>
+                          {folder.matchedFolders && folder.matchedFolders.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-300 pt-0.5">
+                              <span className="text-slate-400 font-medium">
+                                Comparte los mismos archivos duplicados con:
+                              </span>
+                              <span className={`font-mono font-semibold ${theme.highlightText}`}>
+                                {folder.matchedFolders.join(', ')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <span
+                          className={`text-xs font-mono font-bold px-3 py-1.5 rounded-xl border inline-block ${theme.badge}`}
+                        >
+                          {folder.totalImages} archivos 100% repetidos
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 

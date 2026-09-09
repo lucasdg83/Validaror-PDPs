@@ -272,9 +272,12 @@ export interface OperaEntirelyDuplicatedFolder {
   folderDisplayName: string; // e.g. "MercadoLibre_Backup"
   totalImages: number;
   wastedBytes: number;
-  recommendation: string; // "Se debe eliminar la carpeta '...' completa"
+  recommendation: string; // "La carpeta '...' completa está duplicada"
   explanation: string;
   files: OperaImageFile[];
+  clusterId?: number;
+  clusterName?: string;
+  matchedFolders?: string[];
 }
 
 export interface OperaOmittedFile {
