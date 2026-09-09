@@ -161,13 +161,13 @@ export const CheckOperaReportModal: React.FC<CheckOperaReportModalProps> = ({
             </div>
           </div>
 
-          {/* CRITICAL ALERT: Entirely Duplicated Folders Banner ("Se debe eliminar la carpeta ... completa") */}
+          {/* CRITICAL ALERT: Entirely Duplicated Folders Banner */}
           {hasDuplicatedFolders && (
             <div className="space-y-3">
               {report.entirelyDuplicatedFolders.map((folder, idx) => (
                 <div
                   key={idx}
-                  className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-rose-950/60 via-rose-900/40 to-slate-900/80 border-2 border-rose-500/60 shadow-xl space-y-3"
+                  className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-rose-950/60 via-rose-900/40 to-slate-900/80 border-2 border-rose-500/60 shadow-xl"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex items-start gap-3">
@@ -175,14 +175,9 @@ export const CheckOperaReportModal: React.FC<CheckOperaReportModalProps> = ({
                         <FolderX className="w-6 h-6" />
                       </div>
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded bg-rose-500 text-[10px] font-black text-white uppercase tracking-wider">
-                            Acción Recomendada
-                          </span>
-                          <h4 className="text-base sm:text-lg font-black text-rose-200">
-                            {folder.recommendation}
-                          </h4>
-                        </div>
+                        <h4 className="text-base sm:text-lg font-black text-rose-200">
+                          {folder.recommendation}
+                        </h4>
                         <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
                           {folder.explanation}
                         </p>
@@ -193,29 +188,6 @@ export const CheckOperaReportModal: React.FC<CheckOperaReportModalProps> = ({
                       <span className="text-xs font-mono font-bold text-rose-300 px-3 py-1.5 rounded-xl bg-rose-500/20 border border-rose-500/30 inline-block">
                         {folder.totalImages} archivos 100% repetidos
                       </span>
-                    </div>
-                  </div>
-
-                  {/* Redundant Folder Files List */}
-                  <div className="p-3 rounded-xl bg-black/40 border border-rose-500/20 text-xs text-slate-300 space-y-1.5">
-                    <div className="text-[11px] font-bold text-rose-300 uppercase tracking-wide flex items-center gap-1.5">
-                      <FolderOpen className="w-3.5 h-3.5" />
-                      Archivos duplicados contenidos en {folder.folderDisplayName} ({folder.totalImages} archivos):
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                      {folder.files.map((file, fIdx) => (
-                        <div
-                          key={file.id || fIdx}
-                          className="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/5 text-[11px]"
-                        >
-                          <span className="truncate max-w-[220px] font-mono text-slate-200 font-semibold" title={file.name}>
-                            {file.name}
-                          </span>
-                          <span className="text-slate-400 font-mono text-[10px]">
-                            {file.dimensionsStr}
-                          </span>
-                        </div>
-                      ))}
                     </div>
                   </div>
                 </div>

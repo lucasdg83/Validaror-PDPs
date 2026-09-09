@@ -392,8 +392,8 @@ export async function scanAndAnalyzeOperaFolder(
         folderDisplayName: fullSubfolderDisplay,
         totalImages: folderImages.length,
         wastedBytes: 0,
-        recommendation: `Se debe eliminar la carpeta "${fullSubfolderDisplay}" completa`,
-        explanation: `El 100% de las imágenes (${folderImages.length} archivos) contenidas en "${fullSubfolderDisplay}" son copias idénticas de archivos ya existentes en otras ubicaciones del proyecto. Eliminar esta carpeta completa no causará pérdida de ningún asset único.`,
+        recommendation: `La carpeta "${fullSubfolderDisplay}" completa está duplicada`,
+        explanation: `El 100% de las imágenes (${folderImages.length} archivos) contenidas en "${fullSubfolderDisplay}" son copias idénticas de archivos ya existentes en otras ubicaciones del proyecto.`,
         files: folderImages,
       });
     }
@@ -483,15 +483,11 @@ export function generateOperaTXTReport(report: OperaAnalysisReport): string {
     lines.push('🚨 ALERTA CRÍTICA: CARPETAS 100% DUPLICADAS DETECTADAS');
     lines.push('----------------------------------------------------------------------');
     report.entirelyDuplicatedFolders.forEach((folder, idx) => {
-      lines.push(`[ACCIÓN RECOMENDADA #${idx + 1}]`);
+      lines.push(`[CARPETA DUPLICADA #${idx + 1}]`);
       lines.push(`👉 ${folder.recommendation}`);
       lines.push(`   • Ruta Subcarpeta: ${folder.folderDisplayName}`);
       lines.push(`   • Total Archivos:   ${folder.totalImages} imágenes (100% duplicadas en otras ubicaciones)`);
       lines.push(`   • Diagnóstico:     ${folder.explanation}`);
-      lines.push('   • Archivos contenidos:');
-      folder.files.forEach((f) => {
-        lines.push(`       - ${f.name} (${f.dimensionsStr} px)`);
-      });
       lines.push('');
     });
     lines.push('----------------------------------------------------------------------\n');
@@ -632,7 +628,7 @@ export function generateOperaPDFReport(report: OperaAnalysisReport) {
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(225, 29, 72);
-      doc.text(`ACCION RECOMENDADA: ${folder.recommendation}`, 18, y + 6);
+      doc.text(`${folder.recommendation}`, 18, y + 6);
 
       doc.setFontSize(7.5);
       doc.setFont('helvetica', 'normal');
