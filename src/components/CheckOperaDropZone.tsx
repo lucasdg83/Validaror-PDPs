@@ -141,8 +141,6 @@ export const CheckOperaDropZone: React.FC<CheckOperaDropZoneProps> = ({
             </h2>
           </div>
         </div>
-
-        <div />
       </div>
 
       {/* Validation Alert */}
