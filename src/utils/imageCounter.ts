@@ -133,10 +133,10 @@ export async function analyzeImageSizes(
     return b.width * b.height - a.width * a.height;
   });
 
-  // Generate the formatted text exactly as requested:
-  // _ Se encontraron .... cantidad de imágenes de .... x .... px.
+  // Generate the formatted text as requested:
+  // .. assets en dimensión ... x ... px
   const lines = sizeCounts.map(
-    (item) => `_ Se encontraron ${item.count} cantidad de imágenes de ${item.width} x ${item.height} px.`
+    (item) => `${item.count} ${item.count === 1 ? 'asset' : 'assets'} en dimensión ${item.width} x ${item.height} px`
   );
 
   const formattedText = lines.join('\n');
