@@ -4,6 +4,7 @@ export interface SizeCountItem {
   dimensionsStr: string;
   count: number;
   aspectRatio: string;
+  type: 'image' | 'video';
   files: { name: string; relativePath: string; sizeKB: number; type: 'image' | 'video' }[];
 }
 
@@ -158,7 +159,7 @@ export async function analyzeImageSizes(
 
     try {
       const { width, height } = await getAssetDimensions(file);
-      const key = `${width}x${height}`;
+      const key = `${width}x${height}-${type}`;
       const relPath = (file as any).webkitRelativePath || file.name;
       const sizeKB = Math.round(file.size / 1024);
 
@@ -169,6 +170,7 @@ export async function analyzeImageSizes(
           dimensionsStr: `${width} x ${height} px`,
           count: 1,
           aspectRatio: calculateAspectRatio(width, height),
+          type,
           files: [{ name: file.name, relativePath: relPath, sizeKB, type }],
         });
       } else {
@@ -188,11 +190,13 @@ export async function analyzeImageSizes(
   });
 
   // Generate the formatted text as requested:
-  // - .. assets en dimensión ... x ... px
+  // - .. assets en dimensión ... x ... px (Video)
   // Total: ... assets
-  const lines = sizeCounts.map(
-    (item) => `- ${item.count} ${item.count === 1 ? 'asset' : 'assets'} en dimensión ${item.width} x ${item.height} px`
-  );
+  const lines = sizeCounts.map((item) => {
+    const assetWord = item.count === 1 ? 'asset' : 'assets';
+    const videoSuffix = item.type === 'video' ? ' (Video)' : '';
+    return `- ${item.count} ${assetWord} en dimensión ${item.width} x ${item.height} px${videoSuffix}`;
+  });
 
   if (sizeCounts.length > 0) {
     const totalLabel = totalAssets === 1 ? '1 asset' : `${totalAssets} assets`;
