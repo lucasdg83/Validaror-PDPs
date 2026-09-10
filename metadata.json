@@ -1,6 +1,6 @@
 {
   "name": "IA Test Produ",
-  "description": "Herramienta de verificación de specs para PDPs (ATF y BTF), detección de imágenes duplicadas para subida de Opera y control de adaptaciones.",
+  "description": "Herramienta de verificación de specs para PDPs (ATF y BTF), detección de imágenes duplicadas para Opera, control de adaptaciones y contador de tamaños de imágenes.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

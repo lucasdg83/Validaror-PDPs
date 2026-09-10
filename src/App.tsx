@@ -5,6 +5,7 @@ import { CountryModuleCard } from './components/CountryModuleCard';
 import { FolderDropZone } from './components/FolderDropZone';
 import { AdaptationsDropZone } from './components/AdaptationsDropZone';
 import { CheckOperaDropZone } from './components/CheckOperaDropZone';
+import { ImageCounterDropZone } from './components/ImageCounterDropZone';
 import { ReportModal } from './components/ReportModal';
 import { AdaptationReportModal } from './components/AdaptationReportModal';
 import { SpecsViewerModal } from './components/SpecsViewerModal';
@@ -57,7 +58,7 @@ export default function App() {
   };
 
   const handleOpenEditSpecsForCountry = (country: CountryInfo) => {
-    if (country.code === 'ADAPTACIONES' || country.code === 'CHECK_OPERA') return;
+    if (country.code === 'ADAPTACIONES' || country.code === 'CHECK_OPERA' || country.code === 'CONTADOR') return;
     setSpecsModalInitialCountry(country.code);
     setIsSpecsModalOpen(true);
   };
@@ -156,8 +157,8 @@ export default function App() {
               </div>
 
               {/* Minimal Editorial Subtitle */}
-              <p className="text-xs sm:text-sm text-slate-400 max-w-xl mx-auto font-normal leading-relaxed tracking-normal">
-                Herramienta de verificación de specs para PDPs (ATF y BTF), detección de imágenes duplicadas para subida de Opera y control de adaptaciones.
+              <p className="text-xs sm:text-sm text-slate-400 max-w-2xl mx-auto font-normal leading-relaxed tracking-normal">
+                Herramienta de verificación de specs para PDPs (ATF y BTF), detección de imágenes duplicadas para subida de Opera, control de adaptaciones y contador de tamaños.
               </p>
             </div>
 
@@ -244,6 +245,12 @@ export default function App() {
         ) : selectedCountry.code === 'CHECK_OPERA' ? (
           /* Active CHECK OPERA Drop Zone View */
           <CheckOperaDropZone
+            country={selectedCountry}
+            onBack={() => setSelectedCountry(null)}
+          />
+        ) : selectedCountry.code === 'CONTADOR' ? (
+          /* Active CONTADOR Drop Zone View */
+          <ImageCounterDropZone
             country={selectedCountry}
             onBack={() => setSelectedCountry(null)}
           />

@@ -51,6 +51,15 @@ export const COUNTRIES: CountryInfo[] = [
     isOperaModule: true,
   },
   {
+    code: 'CONTADOR',
+    name: 'Contador',
+    flag: '🔢',
+    description: 'Conteo de imágenes por dimensiones (px) y generación de lista simple para copiar',
+    status: 'active',
+    expectedRetailersCount: 0,
+    isCounterModule: true,
+  },
+  {
     code: 'ADAPTACIONES',
     name: 'Adaptaciones',
     flag: '🔄',
