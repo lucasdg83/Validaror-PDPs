@@ -4,20 +4,24 @@ export interface SizeCountItem {
   dimensionsStr: string;
   count: number;
   aspectRatio: string;
-  files: { name: string; relativePath: string; sizeKB: number }[];
+  files: { name: string; relativePath: string; sizeKB: number; type: 'image' | 'video' }[];
 }
 
 export interface ImageCounterResult {
   rootFolderName: string;
   totalFiles: number;
+  totalAssets: number;
   totalImages: number;
-  totalNonImages: number;
+  totalVideos: number;
+  totalUnsupported: number;
   uniqueSizesCount: number;
   sizeCounts: SizeCountItem[];
   formattedText: string;
 }
 
 export const COUNTER_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'bmp', 'avif'];
+export const COUNTER_VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov', 'm4v', 'avi', 'mkv', 'ogv'];
+export const COUNTER_ASSET_EXTENSIONS = [...COUNTER_IMAGE_EXTENSIONS, ...COUNTER_VIDEO_EXTENSIONS];
 
 function gcd(a: number, b: number): number {
   return b === 0 ? a : gcd(b, a % b);
@@ -67,6 +71,50 @@ export async function getImageDimensions(file: File): Promise<{ width: number; h
   });
 }
 
+export async function getVideoDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    (video as any).playsInline = true;
+
+    const onLoaded = () => {
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+      cleanup();
+      if (width && height) {
+        resolve({ width, height });
+      } else {
+        reject(new Error(`No se detectaron dimensiones de video válidas en: ${file.name}`));
+      }
+    };
+
+    const onError = () => {
+      cleanup();
+      reject(new Error(`No se pudo decodificar el video: ${file.name}`));
+    };
+
+    const cleanup = () => {
+      video.removeEventListener('loadedmetadata', onLoaded);
+      video.removeEventListener('error', onError);
+      URL.revokeObjectURL(url);
+    };
+
+    video.addEventListener('loadedmetadata', onLoaded);
+    video.addEventListener('error', onError);
+    video.src = url;
+  });
+}
+
+export async function getAssetDimensions(file: File): Promise<{ width: number; height: number }> {
+  const ext = file.name.split('.').pop()?.toLowerCase() || '';
+  if (COUNTER_VIDEO_EXTENSIONS.includes(ext)) {
+    return getVideoDimensions(file);
+  }
+  return getImageDimensions(file);
+}
+
 export async function analyzeImageSizes(
   files: File[],
   onProgress?: (current: number, total: number, currentFileName: string) => void
@@ -80,30 +128,36 @@ export async function analyzeImageSizes(
     }
   }
 
-  // Filter image files
-  const imageFiles: File[] = [];
-  let nonImageCount = 0;
+  // Filter image and video asset files
+  const assetFiles: { file: File; type: 'image' | 'video' }[] = [];
+  let unsupportedCount = 0;
+  let imageCount = 0;
+  let videoCount = 0;
 
   for (const file of files) {
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
     if (COUNTER_IMAGE_EXTENSIONS.includes(ext)) {
-      imageFiles.push(file);
+      assetFiles.push({ file, type: 'image' });
+      imageCount++;
+    } else if (COUNTER_VIDEO_EXTENSIONS.includes(ext)) {
+      assetFiles.push({ file, type: 'video' });
+      videoCount++;
     } else {
-      nonImageCount++;
+      unsupportedCount++;
     }
   }
 
   const dimensionMap = new Map<string, SizeCountItem>();
-  const totalImages = imageFiles.length;
+  const totalAssets = assetFiles.length;
 
-  for (let i = 0; i < totalImages; i++) {
-    const file = imageFiles[i];
+  for (let i = 0; i < totalAssets; i++) {
+    const { file, type } = assetFiles[i];
     if (onProgress) {
-      onProgress(i + 1, totalImages, file.name);
+      onProgress(i + 1, totalAssets, file.name);
     }
 
     try {
-      const { width, height } = await getImageDimensions(file);
+      const { width, height } = await getAssetDimensions(file);
       const key = `${width}x${height}`;
       const relPath = (file as any).webkitRelativePath || file.name;
       const sizeKB = Math.round(file.size / 1024);
@@ -115,12 +169,12 @@ export async function analyzeImageSizes(
           dimensionsStr: `${width} x ${height} px`,
           count: 1,
           aspectRatio: calculateAspectRatio(width, height),
-          files: [{ name: file.name, relativePath: relPath, sizeKB }],
+          files: [{ name: file.name, relativePath: relPath, sizeKB, type }],
         });
       } else {
         const item = dimensionMap.get(key)!;
         item.count++;
-        item.files.push({ name: file.name, relativePath: relPath, sizeKB });
+        item.files.push({ name: file.name, relativePath: relPath, sizeKB, type });
       }
     } catch (err) {
       console.warn(`Error al leer dimensiones de ${file.name}:`, err);
@@ -134,18 +188,26 @@ export async function analyzeImageSizes(
   });
 
   // Generate the formatted text as requested:
-  // .. assets en dimensión ... x ... px
+  // - .. assets en dimensión ... x ... px
+  // Total: ... assets
   const lines = sizeCounts.map(
-    (item) => `${item.count} ${item.count === 1 ? 'asset' : 'assets'} en dimensión ${item.width} x ${item.height} px`
+    (item) => `- ${item.count} ${item.count === 1 ? 'asset' : 'assets'} en dimensión ${item.width} x ${item.height} px`
   );
+
+  if (sizeCounts.length > 0) {
+    const totalLabel = totalAssets === 1 ? '1 asset' : `${totalAssets} assets`;
+    lines.push(`Total: ${totalLabel}`);
+  }
 
   const formattedText = lines.join('\n');
 
   return {
     rootFolderName: rootFolder,
     totalFiles: files.length,
-    totalImages: imageFiles.length,
-    totalNonImages: nonImageCount,
+    totalAssets,
+    totalImages: imageCount,
+    totalVideos: videoCount,
+    totalUnsupported: unsupportedCount,
     uniqueSizesCount: sizeCounts.length,
     sizeCounts,
     formattedText,

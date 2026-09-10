@@ -5,19 +5,16 @@ import {
   ArrowLeft,
   Loader2,
   Image as ImageIcon,
+  Film,
   Copy,
   Check,
   RotateCcw,
-  Layers,
   FileCheck2,
-  Maximize2,
-  ChevronDown,
-  ChevronUp,
 } from 'lucide-react';
 import {
   analyzeImageSizes,
   ImageCounterResult,
-  COUNTER_IMAGE_EXTENSIONS,
+  COUNTER_ASSET_EXTENSIONS,
 } from '../utils/imageCounter';
 
 interface ImageCounterDropZoneProps {
@@ -28,8 +25,8 @@ interface ImageCounterDropZoneProps {
 export const ImageCounterDropZone: React.FC<ImageCounterDropZoneProps> = ({
   onBack,
 }) => {
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [rootFolderName, setRootFolderName] = useState<string>('');
+  const [, setSelectedFiles] = useState<File[]>([]);
+  const [, setRootFolderName] = useState<string>('');
   const [isDraggingFolder, setIsDraggingFolder] = useState(false);
   const [validationAlert, setValidationAlert] = useState<string | null>(null);
 
@@ -41,7 +38,6 @@ export const ImageCounterDropZone: React.FC<ImageCounterDropZoneProps> = ({
   });
   const [result, setResult] = useState<ImageCounterResult | null>(null);
   const [copied, setCopied] = useState(false);
-  const [expandedSizes, setExpandedSizes] = useState<Record<string, boolean>>({});
 
   const folderInputRef = useRef<HTMLInputElement>(null);
   const filesInputRef = useRef<HTMLInputElement>(null);
@@ -60,13 +56,13 @@ export const ImageCounterDropZone: React.FC<ImageCounterDropZoneProps> = ({
       }
     }
 
-    const imageFiles = files.filter((f) => {
+    const validAssets = files.filter((f) => {
       const ext = f.name.split('.').pop()?.toLowerCase() || '';
-      return COUNTER_IMAGE_EXTENSIONS.includes(ext);
+      return COUNTER_ASSET_EXTENSIONS.includes(ext);
     });
 
-    if (imageFiles.length === 0) {
-      setValidationAlert('La carpeta seleccionada no contiene archivos de imagen válidos (JPG, PNG, WEBP, etc.).');
+    if (validAssets.length === 0) {
+      setValidationAlert('La carpeta seleccionada no contiene archivos de imagen o video válidos (JPG, PNG, WEBP, MP4, MOV, etc.).');
       return;
     }
 
@@ -90,7 +86,7 @@ export const ImageCounterDropZone: React.FC<ImageCounterDropZoneProps> = ({
       setResult(res);
     } catch (err: any) {
       console.error('Error in analyzeImageSizes:', err);
-      setValidationAlert(err?.message || 'Ocurrió un error al analizar los tamaños de las imágenes.');
+      setValidationAlert(err?.message || 'Ocurrió un error al analizar los tamaños de los assets.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -130,13 +126,8 @@ export const ImageCounterDropZone: React.FC<ImageCounterDropZoneProps> = ({
     setResult(null);
     setValidationAlert(null);
     setCopied(false);
-    setExpandedSizes({});
     if (folderInputRef.current) folderInputRef.current.value = '';
     if (filesInputRef.current) filesInputRef.current.value = '';
-  };
-
-  const toggleSizeExpand = (key: string) => {
-    setExpandedSizes((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   return (
@@ -156,14 +147,14 @@ export const ImageCounterDropZone: React.FC<ImageCounterDropZoneProps> = ({
             <div className="flex items-center gap-2">
               <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
                 <span className="text-2xl">🔢</span>
-                CONTADOR DE TAMAÑOS
+                CONTADOR DE ASSETS
               </h2>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                Píxeles
+                Imágenes y Videos
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Selecciona una carpeta para contar cuántas imágenes hay de cada tamaño y obtener una lista fácil de copiar.
+              Selecciona una carpeta para contar cuántos assets (imágenes y videos) hay de cada tamaño y obtener una lista fácil de copiar.
             </p>
           </div>
         </div>
@@ -202,20 +193,18 @@ export const ImageCounterDropZone: React.FC<ImageCounterDropZoneProps> = ({
             }}
             onDragLeave={() => setIsDraggingFolder(false)}
             onDrop={handleDrop}
-            className={`relative rounded-2xl border-2 border-dashed p-10 sm:p-14 text-center transition-all backdrop-blur-xl ${
+            className={`p-8 sm:p-12 rounded-2xl border-2 border-dashed transition-all text-center backdrop-blur-xl ${
               isDraggingFolder
                 ? 'border-cyan-400 bg-cyan-500/10 scale-[1.005]'
                 : 'border-white/15 bg-white/[0.02] hover:border-cyan-500/40 hover:bg-white/[0.04]'
             }`}
           >
-            {/* Hidden native folder input */}
+            {/* Hidden native input with webkitdirectory for full folder selection */}
             <input
               type="file"
               ref={folderInputRef}
               onChange={(e) => e.target.files && handleFolderSelection(e.target.files)}
-              // @ts-ignore
-              webkitdirectory=""
-              directory=""
+              {...({ webkitdirectory: '', directory: '' } as any)}
               multiple
               className="hidden"
             />
@@ -226,7 +215,7 @@ export const ImageCounterDropZone: React.FC<ImageCounterDropZoneProps> = ({
               ref={filesInputRef}
               onChange={(e) => e.target.files && handleFolderSelection(e.target.files)}
               multiple
-              accept="image/*"
+              accept="image/*,video/*"
               className="hidden"
             />
 
@@ -240,7 +229,7 @@ export const ImageCounterDropZone: React.FC<ImageCounterDropZoneProps> = ({
                   Arrastra o selecciona la carpeta a contar
                 </h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  Analiza de inmediato todos los archivos de imagen contenidos en la carpeta y subcarpetas para identificar sus resoluciones (ancho x alto).
+                  Analiza de inmediato todos los archivos de imagen y video contenidos en la carpeta y subcarpetas para identificar sus resoluciones (ancho x alto).
                 </p>
               </div>
 
@@ -259,13 +248,16 @@ export const ImageCounterDropZone: React.FC<ImageCounterDropZoneProps> = ({
                   onClick={() => filesInputRef.current?.click()}
                   className="w-full sm:w-auto px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-medium transition-all border border-white/10 active:scale-[0.98] flex items-center justify-center gap-2"
                 >
-                  <ImageIcon className="w-4 h-4 text-slate-400" />
+                  <div className="flex items-center gap-1.5 text-slate-400">
+                    <ImageIcon className="w-4 h-4" />
+                    <Film className="w-4 h-4" />
+                  </div>
                   <span>O seleccionar archivos</span>
                 </button>
               </div>
 
               <p className="text-[11px] text-slate-500 font-mono pt-1">
-                Formatos soportados: JPG, JPEG, PNG, WEBP, GIF, SVG, BMP, AVIF
+                Formatos: JPG, PNG, WEBP, GIF, SVG, BMP, MP4, MOV, WEBM, MKV
               </p>
             </div>
           </div>
@@ -280,7 +272,7 @@ export const ImageCounterDropZone: React.FC<ImageCounterDropZoneProps> = ({
           </div>
           <div className="space-y-1">
             <h3 className="text-base font-bold text-slate-100">
-              Contando imágenes por tamaño...
+              Contando assets por tamaño...
             </h3>
             <p className="text-xs text-slate-400 font-mono truncate max-w-md mx-auto">
               {currentProgress.fileName || 'Procesando dimensiones...'}
@@ -298,7 +290,7 @@ export const ImageCounterDropZone: React.FC<ImageCounterDropZoneProps> = ({
                 />
               </div>
               <p className="text-[11px] text-slate-400 font-mono">
-                {currentProgress.current} de {currentProgress.total} imágenes ({Math.round((currentProgress.current / currentProgress.total) * 100)}%)
+                {currentProgress.current} de {currentProgress.total} assets ({Math.round((currentProgress.current / currentProgress.total) * 100)}%)
               </p>
             </div>
           )}
@@ -321,11 +313,16 @@ export const ImageCounterDropZone: React.FC<ImageCounterDropZoneProps> = ({
 
             <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10">
               <span className="text-[10px] text-slate-400 uppercase font-mono tracking-wider block">
-                Imágenes analizadas
+                Assets analizados
               </span>
-              <span className="text-xl sm:text-2xl font-bold text-cyan-400 font-mono block">
-                {result.totalImages}
-              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl sm:text-2xl font-bold text-cyan-400 font-mono">
+                  {result.totalAssets}
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  ({result.totalImages} img · {result.totalVideos} vid)
+                </span>
+              </div>
             </div>
 
             <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10">
@@ -342,7 +339,7 @@ export const ImageCounterDropZone: React.FC<ImageCounterDropZoneProps> = ({
                 Otros archivos
               </span>
               <span className="text-xl sm:text-2xl font-bold text-slate-400 font-mono block">
-                {result.totalNonImages}
+                {result.totalUnsupported}
               </span>
             </div>
           </div>
@@ -356,13 +353,13 @@ export const ImageCounterDropZone: React.FC<ImageCounterDropZoneProps> = ({
                   Resultado del conteo de tamaños
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Lista formateada y lista para copiar con el desglose exacto de imágenes.
+                  Lista formateada con viñetas y total, lista para copiar con un clic.
                 </p>
               </div>
 
               <button
                 onClick={handleCopyText}
-                className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all border shadow-md active:scale-[0.98] ${
+                className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all border shadow-md active:scale-[0.98] ${
                   copied
                     ? 'bg-emerald-500/20 border-emerald-400/50 text-emerald-300 shadow-emerald-500/10'
                     : 'bg-cyan-600 hover:bg-cyan-500 border-cyan-400/30 text-white shadow-cyan-600/25'
@@ -385,99 +382,13 @@ export const ImageCounterDropZone: React.FC<ImageCounterDropZoneProps> = ({
             {/* Formatted Text Box */}
             <div className="relative">
               <div className="p-4 sm:p-6 rounded-xl bg-black/40 border border-white/10 font-mono text-xs sm:text-sm text-slate-200 leading-relaxed select-all whitespace-pre-wrap">
-                {result.formattedText || 'No se encontraron imágenes en la carpeta seleccionada.'}
+                {result.formattedText || 'No se encontraron imágenes o videos en la carpeta seleccionada.'}
               </div>
             </div>
 
             <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
-              <span>{result.sizeCounts.length} resoluciones encontradas</span>
+              <span>{result.sizeCounts.length} {result.sizeCounts.length === 1 ? 'resolución encontrada' : 'resoluciones encontradas'}</span>
               <span>Haz clic en "Copiar lista" para copiar todo el texto</span>
-            </div>
-          </div>
-
-          {/* Detailed Visual Breakdown (Optional per-dimension inspection) */}
-          <div className="rounded-2xl bg-white/[0.02] border border-white/10 p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                <Layers className="w-3.5 h-3.5 text-indigo-400" />
-                Desglose por resolución ({result.sizeCounts.length})
-              </h4>
-            </div>
-
-            <div className="space-y-2">
-              {result.sizeCounts.map((item, idx) => {
-                const key = `${item.width}x${item.height}`;
-                const isExpanded = expandedSizes[key] || false;
-
-                return (
-                  <div
-                    key={key}
-                    className="p-3.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.04] border border-white/5 transition-all"
-                  >
-                    <div
-                      onClick={() => toggleSizeExpand(key)}
-                      className="flex items-center justify-between cursor-pointer"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center font-mono font-bold text-xs">
-                          {idx + 1}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm font-bold text-white">
-                              {item.width} × {item.height} px
-                            </span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-white/5 text-slate-300 border border-white/10">
-                              Ratio {item.aspectRatio}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-slate-400">
-                            {item.count} {item.count === 1 ? 'imagen' : 'imágenes'} ({Math.round((item.count / result.totalImages) * 100)}% del total)
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <span className="font-mono font-bold text-sm text-cyan-300 px-3 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
-                          {item.count} {item.count === 1 ? 'archivo' : 'archivos'}
-                        </span>
-                        <button
-                          type="button"
-                          className="text-slate-400 hover:text-white p-1"
-                        >
-                          {isExpanded ? (
-                            <ChevronUp className="w-4 h-4" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Collapsible list of filenames for this size */}
-                    {isExpanded && (
-                      <div className="mt-3 pt-3 border-t border-white/5 space-y-1 pl-11">
-                        <span className="text-[10px] uppercase font-mono text-slate-400 block mb-1">
-                          Archivos con esta resolución ({item.files.length}):
-                        </span>
-                        <div className="max-h-48 overflow-y-auto space-y-1 pr-2">
-                          {item.files.map((file, fIdx) => (
-                            <div
-                              key={fIdx}
-                              className="flex items-center justify-between text-xs font-mono text-slate-300 p-1.5 rounded bg-black/20 hover:bg-black/30"
-                            >
-                              <span className="truncate pr-2">{file.relativePath}</span>
-                              <span className="text-[10px] text-slate-400 flex-shrink-0">
-                                {file.sizeKB} KB
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
             </div>
           </div>
         </div>

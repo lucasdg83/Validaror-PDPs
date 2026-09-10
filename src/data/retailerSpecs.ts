@@ -54,7 +54,7 @@ export const COUNTRIES: CountryInfo[] = [
     code: 'CONTADOR',
     name: 'Contador',
     flag: '🔢',
-    description: 'Conteo de imágenes por dimensiones (px) y generación de lista simple para copiar',
+    description: 'Conteo de imágenes y videos por dimensiones (px) y generación de lista simple para copiar',
     status: 'active',
     expectedRetailersCount: 0,
     isCounterModule: true,

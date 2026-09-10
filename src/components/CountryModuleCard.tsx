@@ -99,7 +99,7 @@ export const CountryModuleCard: React.FC<CountryModuleCardProps> = ({
             )}
             {isCounter && (
               <span className="inline-block text-[10px] uppercase tracking-wider font-semibold text-cyan-400">
-                Conteo de Tamaños (px)
+                Imágenes y Videos (px)
               </span>
             )}
           </div>
