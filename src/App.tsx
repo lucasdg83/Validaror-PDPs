@@ -6,6 +6,7 @@ import { FolderDropZone } from './components/FolderDropZone';
 import { AdaptationsDropZone } from './components/AdaptationsDropZone';
 import { CheckOperaDropZone } from './components/CheckOperaDropZone';
 import { ImageCounterDropZone } from './components/ImageCounterDropZone';
+import { DtfTramadoDropZone } from './components/DtfTramadoDropZone';
 import { ReportModal } from './components/ReportModal';
 import { AdaptationReportModal } from './components/AdaptationReportModal';
 import { SpecsViewerModal } from './components/SpecsViewerModal';
@@ -58,7 +59,7 @@ export default function App() {
   };
 
   const handleOpenEditSpecsForCountry = (country: CountryInfo) => {
-    if (country.code === 'ADAPTACIONES' || country.code === 'CHECK_OPERA' || country.code === 'CONTADOR') return;
+    if (country.code === 'ADAPTACIONES' || country.code === 'CHECK_OPERA' || country.code === 'CONTADOR' || country.code === 'TRAMADO_DTF') return;
     setSpecsModalInitialCountry(country.code);
     setIsSpecsModalOpen(true);
   };
@@ -158,7 +159,7 @@ export default function App() {
 
               {/* Minimal Editorial Subtitle */}
               <p className="text-xs sm:text-sm text-slate-400 max-w-2xl mx-auto font-normal leading-relaxed tracking-normal">
-                Herramienta de verificación de specs para PDPs (ATF y BTF), detección de imágenes duplicadas para subida de Opera, control de adaptaciones y contador de tamaños.
+                Herramienta de verificación de specs para PDPs (ATF y BTF), detección de imágenes duplicadas para subida de Opera, control de adaptaciones, contador de tamaños y tramado DTF textil.
               </p>
             </div>
 
@@ -251,6 +252,12 @@ export default function App() {
         ) : selectedCountry.code === 'CONTADOR' ? (
           /* Active CONTADOR Drop Zone View */
           <ImageCounterDropZone
+            country={selectedCountry}
+            onBack={() => setSelectedCountry(null)}
+          />
+        ) : selectedCountry.code === 'TRAMADO_DTF' ? (
+          /* Active TRAMADO DTF View */
+          <DtfTramadoDropZone
             country={selectedCountry}
             onBack={() => setSelectedCountry(null)}
           />

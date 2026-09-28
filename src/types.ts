@@ -1,4 +1,4 @@
-export type CountryCode = 'AR' | 'UY' | 'CL' | 'MX' | 'CERAN' | 'ADAPTACIONES' | 'CHECK_OPERA' | 'CONTADOR';
+export type CountryCode = 'AR' | 'UY' | 'CL' | 'MX' | 'CERAN' | 'ADAPTACIONES' | 'CHECK_OPERA' | 'CONTADOR' | 'TRAMADO_DTF';
 
 export interface CountryInfo {
   code: CountryCode;
@@ -10,6 +10,7 @@ export interface CountryInfo {
   isAdaptationModule?: boolean;
   isOperaModule?: boolean;
   isCounterModule?: boolean;
+  isDtfModule?: boolean;
 }
 
 export interface RetailerSpec {

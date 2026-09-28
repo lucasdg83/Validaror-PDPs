@@ -60,6 +60,15 @@ export const COUNTRIES: CountryInfo[] = [
     isCounterModule: true,
   },
   {
+    code: 'TRAMADO_DTF',
+    name: 'Tramado DTF',
+    flag: '👕',
+    description: 'Análisis profesional y tramado (halftone / dither) para armado de originales DTF textil con fondo transparente y DPI intacto',
+    status: 'active',
+    expectedRetailersCount: 0,
+    isDtfModule: true,
+  },
+  {
     code: 'ADAPTACIONES',
     name: 'Adaptaciones',
     flag: '🔄',

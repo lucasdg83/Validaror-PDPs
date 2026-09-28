@@ -1,6 +1,6 @@
 import React from 'react';
 import { CountryInfo } from '../types';
-import { FolderSearch, ChevronRight, SlidersHorizontal, AlertCircle, Database, Layers, Calculator } from 'lucide-react';
+import { FolderSearch, ChevronRight, SlidersHorizontal, AlertCircle, Database, Layers, Calculator, Shirt } from 'lucide-react';
 
 interface CountryModuleCardProps {
   country: CountryInfo;
@@ -19,6 +19,7 @@ export const CountryModuleCard: React.FC<CountryModuleCardProps> = ({
   const isAdaptation = country.code === 'ADAPTACIONES' || country.isAdaptationModule;
   const isOpera = country.code === 'CHECK_OPERA' || country.isOperaModule;
   const isCounter = country.code === 'CONTADOR' || country.isCounterModule;
+  const isDtf = country.code === 'TRAMADO_DTF' || country.isDtfModule;
   const retailerNames = country.description.split(', ').map((s) => s.trim());
 
   return (
@@ -31,6 +32,8 @@ export const CountryModuleCard: React.FC<CountryModuleCardProps> = ({
           ? 'bg-white/[0.03] border-white/10 hover:border-pink-500/40 hover:bg-white/[0.06] hover:shadow-2xl hover:shadow-pink-500/10'
           : isCounter
           ? 'bg-white/[0.03] border-white/10 hover:border-cyan-500/40 hover:bg-white/[0.06] hover:shadow-2xl hover:shadow-cyan-500/10'
+          : isDtf
+          ? 'bg-white/[0.03] border-white/10 hover:border-amber-500/40 hover:bg-white/[0.06] hover:shadow-2xl hover:shadow-amber-500/10'
           : 'bg-white/[0.03] border-white/10 hover:border-indigo-500/40 hover:bg-white/[0.06] hover:shadow-2xl hover:shadow-indigo-500/10'
       }`}
     >
@@ -55,6 +58,8 @@ export const CountryModuleCard: React.FC<CountryModuleCardProps> = ({
                 ? 'bg-gradient-to-br from-pink-500/20 via-purple-500/10 to-indigo-500/20 border-pink-500/30 text-pink-400'
                 : isCounter
                 ? 'bg-gradient-to-br from-cyan-500/20 via-teal-500/10 to-blue-500/20 border-cyan-500/30 text-cyan-400'
+                : isDtf
+                ? 'bg-gradient-to-br from-amber-500/20 via-orange-500/10 to-yellow-500/20 border-amber-500/30 text-amber-400'
                 : 'bg-white/5 border-white/10'
             }`}
           >
@@ -65,6 +70,10 @@ export const CountryModuleCard: React.FC<CountryModuleCardProps> = ({
             ) : isCounter ? (
               <div className="flex flex-col items-center justify-center">
                 <Calculator className="w-6 h-6 text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.4)]" />
+              </div>
+            ) : isDtf ? (
+              <div className="flex flex-col items-center justify-center">
+                <Shirt className="w-6 h-6 text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
               </div>
             ) : (
               country.flag
@@ -80,10 +89,12 @@ export const CountryModuleCard: React.FC<CountryModuleCardProps> = ({
                     ? 'text-slate-100 group-hover:text-pink-300'
                     : isCounter
                     ? 'text-slate-100 group-hover:text-cyan-300'
+                    : isDtf
+                    ? 'text-slate-100 group-hover:text-amber-300'
                     : 'text-slate-100 group-hover:text-indigo-300'
                 }`}
               >
-                {isAdaptation ? 'ADAPTACIONES' : isOpera ? 'CHECK OPERA' : isCounter ? 'CONTADOR' : `PDP ${country.code}`}
+                {isAdaptation ? 'ADAPTACIONES' : isOpera ? 'CHECK OPERA' : isCounter ? 'CONTADOR' : isDtf ? 'TRAMADO DTF' : `PDP ${country.code}`}
               </h3>
             </div>
 
@@ -102,11 +113,16 @@ export const CountryModuleCard: React.FC<CountryModuleCardProps> = ({
                 Imágenes y Videos (px)
               </span>
             )}
+            {isDtf && (
+              <span className="inline-block text-[10px] uppercase tracking-wider font-semibold text-amber-400">
+                Armado Textil DTF (PNG)
+              </span>
+            )}
           </div>
         </div>
 
         <div className="flex items-center gap-1.5">
-          {!isAdaptation && !isOpera && !isCounter && onEditSpecs && (
+          {!isAdaptation && !isOpera && !isCounter && !isDtf && onEditSpecs && (
             <button
               type="button"
               title={`Configurar especificaciones técnicas de ${country.name}`}
@@ -136,6 +152,8 @@ export const CountryModuleCard: React.FC<CountryModuleCardProps> = ({
                   ? 'bg-pink-500/10 text-pink-200 border-pink-500/20'
                   : isCounter
                   ? 'bg-cyan-500/10 text-cyan-200 border-cyan-500/20'
+                  : isDtf
+                  ? 'bg-amber-500/10 text-amber-200 border-amber-500/20'
                   : 'bg-white/5 text-slate-300 border border-white/5'
               }`}
             >
@@ -176,17 +194,19 @@ export const CountryModuleCard: React.FC<CountryModuleCardProps> = ({
           id={`btn-analizar-${country.code.toLowerCase()}`}
           onClick={() => onSelect(country)}
           disabled={isLoading}
-          className={`w-full relative flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-xs tracking-wider uppercase transition-all shadow-lg text-white border active:scale-[0.98] ${
+          className={`w-full relative flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-xs tracking-wider uppercase transition-all shadow-lg border active:scale-[0.98] ${
             isOpera
-              ? 'shadow-pink-500/20 hover:shadow-pink-500/35 bg-pink-600 hover:bg-pink-500 border-pink-400/30'
+              ? 'text-white shadow-pink-500/20 hover:shadow-pink-500/35 bg-pink-600 hover:bg-pink-500 border-pink-400/30'
               : isCounter
-              ? 'shadow-cyan-500/20 hover:shadow-cyan-500/35 bg-cyan-600 hover:bg-cyan-500 border-cyan-400/30'
-              : 'shadow-indigo-500/20 hover:shadow-indigo-500/35 bg-indigo-500 hover:bg-indigo-600 border-indigo-400/30'
+              ? 'text-white shadow-cyan-500/20 hover:shadow-cyan-500/35 bg-cyan-600 hover:bg-cyan-500 border-cyan-400/30'
+              : isDtf
+              ? 'text-slate-950 shadow-amber-500/20 hover:shadow-amber-500/35 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 border-amber-400/40 font-extrabold'
+              : 'text-white shadow-indigo-500/20 hover:shadow-indigo-500/35 bg-indigo-500 hover:bg-indigo-600 border-indigo-400/30'
           }`}
         >
-          <FolderSearch className="w-4 h-4 text-white" />
-          <span>{isOpera ? 'Abrir Check Opera' : isCounter ? 'Abrir Contador' : 'Validar Carpeta'}</span>
-          <ChevronRight className="w-4 h-4 opacity-70 group-hover:translate-x-1 transition-transform" />
+          <FolderSearch className={`w-4 h-4 ${isDtf ? 'text-slate-950' : 'text-white'}`} />
+          <span>{isOpera ? 'Abrir Check Opera' : isCounter ? 'Abrir Contador' : isDtf ? 'Abrir Tramado DTF' : 'Validar Carpeta'}</span>
+          <ChevronRight className={`w-4 h-4 opacity-70 group-hover:translate-x-1 transition-transform ${isDtf ? 'text-slate-950' : ''}`} />
         </button>
       )}
     </div>
